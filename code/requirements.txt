@@ -10,6 +10,7 @@ tqdm
 torchprofile
 onnx
 onnxruntime
+pytest>=7.0
 # optional (deployment)
 # coremltools
 # tensorflow

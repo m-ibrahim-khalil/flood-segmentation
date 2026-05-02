@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pt
+runs/
+exports/
+data/
+.ipynb_checkpoints/
+.DS_Store
+.venv/
+.env
+*.onnx
+*.tflite
+*.mlmodel
+.pytest_cache/
