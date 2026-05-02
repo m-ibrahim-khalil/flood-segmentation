@@ -19,7 +19,7 @@ def train_teacher(model, train_loader, val_loader, *, epochs: int = 50, lr: floa
     model = model.to(device)
     opt = AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     sched = CosineAnnealingLR(opt, T_max=epochs)
-    scaler = torch.cuda.amp.GradScaler(enabled=(device == "cuda"))
+    scaler = torch.amp.GradScaler("cuda", enabled=(device == "cuda"))
     best_iou = 0.0
 
     for epoch in range(epochs):
@@ -28,7 +28,7 @@ def train_teacher(model, train_loader, val_loader, *, epochs: int = 50, lr: floa
         for x, y in tqdm(train_loader, desc=f"Teacher ep {epoch+1}/{epochs}", leave=False):
             x, y = x.to(device), y.to(device)
             opt.zero_grad()
-            with torch.cuda.amp.autocast(enabled=(device == "cuda")):
+            with torch.amp.autocast("cuda", enabled=(device == "cuda")):
                 logits = model(x)
                 loss = task_loss(logits, y)
             scaler.scale(loss).backward()
@@ -90,7 +90,7 @@ def train_student_kd(student, teacher, train_loader, val_loader, *,
 
     opt = AdamW(opt_params, lr=lr, weight_decay=1e-4)
     sched = CosineAnnealingLR(opt, T_max=epochs)
-    scaler = torch.cuda.amp.GradScaler(enabled=(device == "cuda"))
+    scaler = torch.amp.GradScaler("cuda", enabled=(device == "cuda"))
     best_iou = 0.0
 
     for epoch in range(epochs):
@@ -99,7 +99,7 @@ def train_student_kd(student, teacher, train_loader, val_loader, *,
         for x, y in tqdm(train_loader, desc=f"Student ep {epoch+1}/{epochs}", leave=False):
             x, y = x.to(device), y.to(device)
             opt.zero_grad()
-            with torch.cuda.amp.autocast(enabled=(device == "cuda")):
+            with torch.amp.autocast("cuda", enabled=(device == "cuda")):
                 with torch.no_grad():
                     t_logits = teacher(x)
                     f_t = t_hook.features if use_feature else None
