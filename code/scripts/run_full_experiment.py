@@ -12,8 +12,9 @@ import numpy as np
 import torch
 
 from floodlite.data import make_loaders, FSSD
-from floodlite.models import make_teacher, make_student, count_params, estimate_flops, STUDENT_BACKBONES
+from floodlite.models import make_teacher, make_student, count_params, estimate_flops, STUDENT_BACKBONES, make_baseline_mobilenetv2
 from floodlite.train import train_teacher, train_student_kd
+from floodlite.train import train_teacher as train_taskonly
 from floodlite.quantize import quantize_int8, model_size_mb
 from floodlite.benchmark import benchmark_latency
 from floodlite.metrics import compute_metrics
@@ -39,9 +40,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data_root", required=True)
     ap.add_argument("--fold", type=int, default=0)
-    ap.add_argument("--folds", type=int, default=1, help="Number of folds to run starting from --fold")
-    ap.add_argument("--epochs_teacher", type=int, default=50)
-    ap.add_argument("--epochs_student", type=int, default=50)
+    ap.add_argument("--folds", type=int, default=3, help="Number of folds to run starting from --fold")
+    ap.add_argument("--epochs_teacher", type=int, default=35)
+    ap.add_argument("--epochs_student", type=int, default=35)
+    ap.add_argument("--include_baseline", action="store_true", default=False,
+                    help="Train a MobileNetV2 baseline (task loss only) for comparison")
     ap.add_argument("--batch_size", type=int, default=8)
     ap.add_argument("--out_dir", default="runs")
     args = ap.parse_args()
@@ -61,7 +64,16 @@ def main():
         teacher_metrics = evaluate(teacher, va, device)
         print(f"Teacher final: {teacher_metrics}")
 
-        fold_results = {"teacher": teacher_metrics, "students": {}}
+        baseline_metrics = None
+        if args.include_baseline:
+            ckpt_baseline = Path(args.out_dir) / f"baseline_mobilenetv2_fold{fold}.pt"
+            baseline = make_baseline_mobilenetv2().to(device)
+            train_taskonly(baseline, tr, va, epochs=args.epochs_student, device=device, ckpt_path=ckpt_baseline)
+            baseline.load_state_dict(torch.load(ckpt_baseline, map_location=device))
+            baseline_metrics = evaluate(baseline, va, device)
+            print(f"Baseline (MobileNetV2): {baseline_metrics}")
+
+        fold_results = {"teacher": teacher_metrics, "baseline_mobilenetv2": baseline_metrics, "students": {}}
         for sname in STUDENT_BACKBONES:
             for kd in ("none", "resp", "feat", "comb"):
                 use_resp = kd in ("resp", "comb")
