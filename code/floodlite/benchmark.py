@@ -36,3 +36,33 @@ def benchmark_latency(model: torch.nn.Module, *, img_size: int = 256, n_warm: in
         "std_ms":  float(arr.std()),
         "fps":     float(1000.0 / np.percentile(arr, 50)),
     }
+
+
+def benchmark_onnxruntime(onnx_path, *, img_size: int = 256, n_warm: int = 20,
+                          n_iter: int = 200,
+                          providers: list[str] | None = None) -> dict[str, float]:
+    """Measure latency of an ONNX model under onnxruntime.
+
+    Used for AWS Graviton (ARM CPU) and WASM targets. Output schema matches
+    benchmark_latency so downstream code can pool both.
+    """
+    import onnxruntime as ort
+    sess = ort.InferenceSession(str(onnx_path),
+                                 providers=providers or ["CPUExecutionProvider"])
+    in_name = sess.get_inputs()[0].name
+    x = np.random.randn(1, 3, img_size, img_size).astype(np.float32)
+    for _ in range(n_warm):
+        sess.run(None, {in_name: x})
+    times = []
+    for _ in range(n_iter):
+        t0 = time.perf_counter()
+        sess.run(None, {in_name: x})
+        times.append((time.perf_counter() - t0) * 1000.0)
+    arr = np.asarray(times)
+    return {
+        "p50_ms":  float(np.percentile(arr, 50)),
+        "p95_ms":  float(np.percentile(arr, 95)),
+        "mean_ms": float(arr.mean()),
+        "std_ms":  float(arr.std()),
+        "fps":     float(1000.0 / np.percentile(arr, 50)),
+    }
