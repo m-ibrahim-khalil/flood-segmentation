@@ -16,7 +16,7 @@ TEACHER_BACKBONE = "efficientnet-b0"  # smp encoder name
 STUDENT_BACKBONES = {
     "mobilenetv3_small": "timm-mobilenetv3_small_100",
     "efficientnet_lite0": "timm-tf_efficientnet_lite0",
-    "mobilevit_xxs":      "timm-mobilevit_xxs",
+    "mobilevit_xxs":      "tu-mobilevit_xxs",
 }
 
 
@@ -37,6 +37,22 @@ def make_student(name: str, num_classes: int = 1) -> nn.Module:
         raise ValueError(f"Unknown student '{name}'. Choose from {list(STUDENT_BACKBONES)}")
     return smp.Unet(
         encoder_name=STUDENT_BACKBONES[name],
+        encoder_weights="imagenet",
+        in_channels=3,
+        classes=num_classes,
+        activation=None,
+    )
+
+
+def make_baseline_mobilenetv2(num_classes: int = 1) -> nn.Module:
+    """UNet + MobileNetV2 baseline.
+
+    A published lightweight encoder trained from ImageNet pretraining;
+    used as an off-the-shelf reference point against the KD students.
+    No KD is applied — task loss only.
+    """
+    return smp.Unet(
+        encoder_name="mobilenet_v2",
         encoder_weights="imagenet",
         in_channels=3,
         classes=num_classes,
