@@ -154,3 +154,27 @@ def make_loaders(root: str | Path, fold: int, n_folds: int = 5,
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False,
                             num_workers=num_workers, pin_memory=True)
     return train_loader, val_loader
+
+
+def make_sen1floods11_loader(root: str | Path, *, n_chips: int = 250,
+                              batch_size: int = 8, img_size: int = 256,
+                              num_workers: int = 2):
+    """Build a DataLoader for the Sen1Floods11 RGB OOD evaluation set.
+
+    Expects ``<root>/images/*.png`` and ``<root>/labels/*.png`` with matching
+    stems. Same val-style transforms as FSSD (no augmentation, ImageNet
+    normalization, 256x256). Eval-only — no shuffle.
+    """
+    root = Path(root)
+    img_dir = root / "images"
+    lbl_dir = root / "labels"
+    pairs = gather_pairs(img_dir, lbl_dir)
+    if not pairs:
+        raise FileNotFoundError(
+            f"No Sen1Floods11 image/label pairs found under {root!s}. "
+            "Expected images/ and labels/ subdirs with matching stems."
+        )
+    pairs = pairs[:n_chips]
+    ds = FSSD(pairs, img_size=img_size, train=False)
+    return DataLoader(ds, batch_size=batch_size, shuffle=False,
+                      num_workers=num_workers, pin_memory=True)
