@@ -16,7 +16,7 @@ TEACHER_BACKBONE = "efficientnet-b0"  # smp encoder name
 STUDENT_BACKBONES = {
     "mobilenetv3_small": "timm-mobilenetv3_small_100",
     "efficientnet_lite0": "timm-tf_efficientnet_lite0",
-    "mobilevit_xxs":      "tu-mobilevit_xxs",
+    "mobilevit_xxs":      "timm-mobilevit_xxs",
 }
 
 
