@@ -53,6 +53,11 @@ def main():
                     help="Train a MobileNetV2 baseline (task loss only) for comparison")
     ap.add_argument("--batch_size", type=int, default=8)
     ap.add_argument("--out_dir", default="runs")
+    ap.add_argument("--skip_if_exists", action="store_true", default=False,
+                    help="Skip training a (config,fold) when its checkpoint .pt already "
+                         "exists in --out_dir. Loads the existing weights and evaluates "
+                         "instead of retraining. Useful for iterating on quantization or "
+                         "downstream steps without paying training cost again.")
     args = ap.parse_args()
 
     device = device_pick()
@@ -65,7 +70,10 @@ def main():
         tr, va = make_loaders(args.data_root, fold=fold, batch_size=args.batch_size)
         ckpt_teacher = Path(args.out_dir) / f"teacher_fold{fold}.pt"
         teacher = make_teacher().to(device)
-        train_teacher(teacher, tr, va, epochs=args.epochs_teacher, device=device, ckpt_path=ckpt_teacher)
+        if args.skip_if_exists and ckpt_teacher.exists():
+            print(f"[skip] teacher_fold{fold}: checkpoint exists, loading")
+        else:
+            train_teacher(teacher, tr, va, epochs=args.epochs_teacher, device=device, ckpt_path=ckpt_teacher)
         teacher.load_state_dict(torch.load(ckpt_teacher, map_location=device))
         teacher_metrics = evaluate(teacher, va, device)
         print(f"Teacher final: {teacher_metrics}")
@@ -74,7 +82,10 @@ def main():
         if args.include_baseline:
             ckpt_baseline = Path(args.out_dir) / f"baseline_mobilenetv2_fold{fold}.pt"
             baseline = make_baseline_mobilenetv2().to(device)
-            train_taskonly(baseline, tr, va, epochs=args.epochs_student, device=device, ckpt_path=ckpt_baseline)
+            if args.skip_if_exists and ckpt_baseline.exists():
+                print(f"[skip] baseline_mobilenetv2_fold{fold}: checkpoint exists, loading")
+            else:
+                train_taskonly(baseline, tr, va, epochs=args.epochs_student, device=device, ckpt_path=ckpt_baseline)
             baseline.load_state_dict(torch.load(ckpt_baseline, map_location=device))
             baseline_metrics = evaluate(baseline, va, device)
             print(f"Baseline (MobileNetV2): {baseline_metrics}")
@@ -86,9 +97,12 @@ def main():
                 use_feat = kd in ("feat", "comb")
                 ckpt = Path(args.out_dir) / f"{sname}_{kd}_fold{fold}.pt"
                 student = make_student(sname).to(device)
-                train_student_kd(student, teacher, tr, va,
-                                 epochs=args.epochs_student, use_response=use_resp, use_feature=use_feat,
-                                 device=device, ckpt_path=ckpt)
+                if args.skip_if_exists and ckpt.exists():
+                    print(f"[skip] {sname}_{kd}_fold{fold}: checkpoint exists, loading")
+                else:
+                    train_student_kd(student, teacher, tr, va,
+                                     epochs=args.epochs_student, use_response=use_resp, use_feature=use_feat,
+                                     device=device, ckpt_path=ckpt)
                 student.load_state_dict(torch.load(ckpt, map_location=device))
                 m = evaluate(student, va, device)
                 fold_results["students"][f"{sname}_{kd}"] = m
