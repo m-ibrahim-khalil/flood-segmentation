@@ -6,8 +6,14 @@ Usage (after `pip install -r requirements.txt`):
 Set --folds 5 to loop over the full cross-validation.
 """
 from __future__ import annotations
-import argparse, json, time, copy, os
+import argparse, json, time, copy, os, sys
 from pathlib import Path
+
+# Make the floodlite package importable regardless of where this script is
+# invoked from (Kaggle runs as `python scripts/run_full_experiment.py` which
+# only puts scripts/ on sys.path, not code/).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import numpy as np
 import torch
 

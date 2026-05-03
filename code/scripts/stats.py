@@ -5,8 +5,11 @@ Outputs:
   - Fold-0 paired pixel-bootstrap (n=1000 resamples) for the same comparisons.
 """
 from __future__ import annotations
-import argparse, json
+import argparse, json, sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import numpy as np
 import torch
 from scipy.stats import wilcoxon

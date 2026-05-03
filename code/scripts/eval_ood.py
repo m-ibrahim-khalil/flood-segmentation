@@ -1,7 +1,10 @@
 """Evaluate FSSD-trained models on Sen1Floods11 RGB chips (no fine-tuning)."""
 from __future__ import annotations
-import argparse, json
+import argparse, json, sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import torch
 
 from floodlite.data import make_sen1floods11_loader
