@@ -6,6 +6,19 @@ import torch
 
 def export_onnx(model: torch.nn.Module, out_path: str | Path,
                 img_size: int = 256, opset: int = 13) -> Path:
+    """Export a model to a single self-contained ONNX file.
+
+    Forces ``dynamo=False`` to use the legacy TorchScript-based exporter:
+      * Produces ONE .onnx file with weights embedded (no external .data
+        sidecars), so file_size_mb() reports the true model size.
+      * Honours ``opset_version`` exactly (the new dynamo exporter silently
+        upgrades to opset 18 on PyTorch 2.8+ and then fails to down-convert
+        ops like Pad/Resize back to 17).
+      * Avoids the 'dynamic_axes is not recommended when dynamo=True' warning.
+
+    The legacy exporter is deprecated in PyTorch 2.9+ but still functional;
+    we will revisit when it is removed.
+    """
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     model = model.eval().cpu()
     dummy = torch.randn(1, 3, img_size, img_size)
@@ -15,6 +28,7 @@ def export_onnx(model: torch.nn.Module, out_path: str | Path,
         input_names=["input"],
         output_names=["logits"],
         dynamic_axes={"input": {0: "batch"}, "logits": {0: "batch"}},
+        dynamo=False,
     )
     return Path(out_path)
 

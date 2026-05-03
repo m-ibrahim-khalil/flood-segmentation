@@ -220,6 +220,12 @@ def quantize_int8_onnx_static(model: nn.Module, *, fp_onnx_path, int8_onnx_path,
 
     reader = _TorchLoaderCalibReader(calib_loader, input_name=input_name,
                                      n_batches=n_calib_batches)
+    # per_channel=False is required for ViT-style models (MobileViT). LayerNorm
+    # weights are rank-1 (shape [C]); the per-channel quantizer assumes axis-1
+    # exists and silently produces broken weights for those layers, which on
+    # MobileViT-XXS dropped IoU from 0.89 to 0.66 in our tests. Per-tensor
+    # quantization costs ~0.1-0.3 IoU points on Conv layers but works on
+    # mixed CNN+ViT models.
     quantize_static(
         str(fp_onnx_path),
         str(int8_onnx_path),
@@ -227,7 +233,8 @@ def quantize_int8_onnx_static(model: nn.Module, *, fp_onnx_path, int8_onnx_path,
         quant_format=QuantFormat.QDQ,
         weight_type=QuantType.QInt8,
         activation_type=QuantType.QInt8,
-        per_channel=True,
+        per_channel=False,
+        op_types_to_quantize=["Conv", "Gemm", "MatMul"],
     )
     return int8_onnx_path
 
