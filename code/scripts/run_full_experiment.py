@@ -21,7 +21,11 @@ from floodlite.data import make_loaders, FSSD
 from floodlite.models import make_teacher, make_student, count_params, estimate_flops, STUDENT_BACKBONES, make_baseline_mobilenetv2
 from floodlite.train import train_teacher, train_student_kd
 from floodlite.train import train_teacher as train_taskonly
-from floodlite.quantize import quantize_int8, model_size_mb
+from floodlite.quantize import (
+    quantize_int8_onnx_static,
+    evaluate_onnx,
+    file_size_mb,
+)
 from floodlite.benchmark import benchmark_latency
 from floodlite.metrics import compute_metrics
 
@@ -108,19 +112,37 @@ def main():
                 fold_results["students"][f"{sname}_{kd}"] = m
                 print(f"[{sname} {kd}] {m}")
 
-        # quantize the comb-config students; benchmark host latency
+        # Quantize the no-KD students via ONNX dynamic quantization
+        # (PyTorch eager-mode static PTQ fails on timm Conv2dSame in modern PyTorch).
+        exports_dir = Path(args.out_dir) / "exports"
         for sname in STUDENT_BACKBONES:
-            ckpt = Path(args.out_dir) / f"{sname}_comb_fold{fold}.pt"
+            ckpt = Path(args.out_dir) / f"{sname}_none_fold{fold}.pt"
+            if not ckpt.exists():
+                print(f"Quantize {sname}: skipping, no-KD checkpoint missing")
+                continue
             student_fp = make_student(sname).cpu()
             student_fp.load_state_dict(torch.load(ckpt, map_location="cpu"))
+            student_fp.eval()
+            fp_onnx = exports_dir / f"{sname}_fold{fold}_fp32.onnx"
+            int8_onnx = exports_dir / f"{sname}_fold{fold}_int8.onnx"
             try:
-                student_q = quantize_int8(student_fp, tr)
-                m_q = evaluate(student_q.cpu(), va, "cpu")
+                quantize_int8_onnx_static(
+                    student_fp,
+                    fp_onnx_path=fp_onnx,
+                    int8_onnx_path=int8_onnx,
+                    calib_loader=tr,
+                    n_calib_batches=10,
+                )
+                fp_m = evaluate_onnx(fp_onnx, va)
+                int8_m = evaluate_onnx(int8_onnx, va)
                 fold_results.setdefault("quantized", {})[sname] = {
-                    "iou": m_q["iou"],
-                    "fp_size_mb": model_size_mb(student_fp),
-                    "q_size_mb":  model_size_mb(student_q),
+                    "fp32_iou": fp_m["iou"],
+                    "int8_iou": int8_m["iou"],
+                    "fp_size_mb": file_size_mb(fp_onnx),
+                    "q_size_mb":  file_size_mb(int8_onnx),
                 }
+                print(f"Quantize {sname}: IoU {fp_m['iou']:.4f} -> {int8_m['iou']:.4f}  "
+                      f"size {file_size_mb(fp_onnx):.1f} MB -> {file_size_mb(int8_onnx):.1f} MB")
             except Exception as e:
                 print(f"Quantize {sname} failed: {e}")
             lat = benchmark_latency(make_student(sname), device=device)

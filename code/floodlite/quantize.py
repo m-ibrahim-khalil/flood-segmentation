@@ -1,25 +1,26 @@
-"""Post-training INT8 quantization (PyTorch static quantization).
+"""Post-training INT8 quantization for FloodLite.
 
-PyTorch eager-mode static PTQ has two hard requirements that SMP UNet does
-not satisfy out of the box:
+Two independent paths are exposed:
 
-1. **CPU-only.** Calibration and conversion must run on CPU.
+1. ``quantize_int8`` — PyTorch eager-mode static PTQ. Wraps the model with
+   QuantStub/DeQuantStub and runs prepare/calibrate/convert on CPU.
+   Works for "vanilla" CNNs but fails on timm encoders that use
+   ``Conv2dSame`` (TF-style asymmetric padding) because the underlying
+   ``aten::_slow_conv2d_forward`` op has no quantized CPU kernel:
 
-       NotImplementedError: Could not run 'quantized::conv2d.new' with
-       arguments from the 'CUDA' backend.
+       Could not run 'aten::_slow_conv2d_forward' with arguments from
+       the 'QuantizedCPU' backend.
 
-2. **Explicit quant boundaries.** The model must wrap its input in a
-   ``QuantStub`` (FP32 -> quint8) and its output in a ``DeQuantStub``
-   (quint8 -> FP32). Without these, ``convert()`` swaps in quantized ops
-   (e.g. ``quantized::batch_norm2d``) that then receive plain FP32 inputs
-   and raise:
+   This affects MobileNetV3-Small, MobileNetV2 (depending on smp version),
+   and other timm-backed encoders. **Use ``quantize_int8_onnx_dynamic``
+   for these — it's the recommended path for FloodLite on Kaggle.**
 
-       Could not run 'quantized::batch_norm2d' with arguments from the
-       'CPU' backend.
-
-This module addresses both: forces CPU device for the model and calibration
-tensors, and wraps the model in ``QuantWrapper`` to provide the missing
-quant/dequant boundaries before ``prepare()`` runs.
+2. ``quantize_int8_onnx_dynamic`` — exports the model to ONNX FP32, then
+   uses ``onnxruntime.quantization.quantize_dynamic`` to produce an INT8
+   ONNX file. Weights are quantized to INT8 at conversion time;
+   activations are quantized at inference time by onnxruntime. Works on
+   any model exportable to ONNX, including all three FloodLite students.
+   This is the workflow used for the IJDRR submission's INT8 numbers.
 """
 from __future__ import annotations
 from pathlib import Path
@@ -111,3 +112,145 @@ def model_size_mb(model: nn.Module) -> float:
     buf = io.BytesIO()
     torch.save(model.state_dict(), buf)
     return buf.tell() / (1024 ** 2)
+
+
+def file_size_mb(path) -> float:
+    """Return the on-disk size of a file in MB."""
+    return Path(path).stat().st_size / (1024 ** 2)
+
+
+def quantize_int8_onnx_dynamic(model: nn.Module, *, fp_onnx_path,
+                               int8_onnx_path, img_size: int = 256,
+                               opset: int = 17):
+    """Export ``model`` to FP32 ONNX, then run ONNX dynamic INT8 quantization.
+
+    Reliable alternative to PyTorch eager-mode static PTQ for models
+    containing timm Conv2dSame, MobileViT attention, or other ops without
+    quantized CPU kernels in PyTorch 2.4+. Only weights are stored as INT8;
+    activations are quantized at runtime by onnxruntime.
+
+    NOTE: produces ``ConvInteger`` ops which lack CPU EP support in some
+    onnxruntime versions. Prefer ``quantize_int8_onnx_static`` for Conv-heavy
+    models — that path uses QDQ format with standard Conv ops that run
+    everywhere.
+
+    Returns the path to the INT8 ONNX file.
+    """
+    from .export import export_onnx
+    from onnxruntime.quantization import quantize_dynamic, QuantType
+
+    fp_onnx_path = Path(fp_onnx_path)
+    int8_onnx_path = Path(int8_onnx_path)
+    fp_onnx_path.parent.mkdir(parents=True, exist_ok=True)
+    int8_onnx_path.parent.mkdir(parents=True, exist_ok=True)
+
+    export_onnx(model, fp_onnx_path, img_size=img_size, opset=opset)
+    quantize_dynamic(
+        str(fp_onnx_path),
+        str(int8_onnx_path),
+        weight_type=QuantType.QInt8,
+    )
+    return int8_onnx_path
+
+
+class _TorchLoaderCalibReader:
+    """Adapt a PyTorch DataLoader to onnxruntime.quantization.CalibrationDataReader.
+
+    Yields up to ``n_batches`` calibration batches, each as a single-item dict
+    keyed by the ONNX model's input tensor name. Returns ``None`` from
+    ``get_next`` when exhausted, which is the contract onnxruntime expects.
+    """
+
+    def __init__(self, loader, input_name: str, n_batches: int = 10):
+        self._gen = self._iterate(loader, input_name, n_batches)
+
+    @staticmethod
+    def _iterate(loader, input_name: str, n_batches: int):
+        import numpy as np
+        seen = 0
+        for batch in loader:
+            x = batch[0] if isinstance(batch, (list, tuple)) else batch
+            if hasattr(x, "detach"):
+                x = x.detach().cpu().numpy()
+            yield {input_name: np.asarray(x, dtype="float32")}
+            seen += 1
+            if seen >= n_batches:
+                return
+
+    def get_next(self):
+        try:
+            return next(self._gen)
+        except StopIteration:
+            return None
+
+
+def quantize_int8_onnx_static(model: nn.Module, *, fp_onnx_path, int8_onnx_path,
+                              calib_loader, n_calib_batches: int = 10,
+                              img_size: int = 256, opset: int = 17):
+    """Static INT8 ONNX quantization in QDQ format with calibration.
+
+    Workflow:
+        1. Export ``model`` -> FP32 ONNX.
+        2. Calibrate using up to ``n_calib_batches`` batches from
+           ``calib_loader`` (drawn from the training distribution).
+        3. Emit an INT8 ONNX in QDQ format — QuantizeLinear/DequantizeLinear
+           are placed around standard Conv/MatMul ops, so the resulting
+           graph uses only ops with broad onnxruntime CPU support.
+
+    Both weights and activations are quantized to INT8. This is the
+    recommended quantization path for FloodLite on Kaggle.
+
+    Returns the path to the INT8 ONNX file.
+    """
+    from .export import export_onnx
+    from onnxruntime.quantization import quantize_static, QuantType, QuantFormat
+
+    fp_onnx_path = Path(fp_onnx_path)
+    int8_onnx_path = Path(int8_onnx_path)
+    fp_onnx_path.parent.mkdir(parents=True, exist_ok=True)
+    int8_onnx_path.parent.mkdir(parents=True, exist_ok=True)
+
+    export_onnx(model, fp_onnx_path, img_size=img_size, opset=opset)
+
+    # Discover the ONNX input name (matches what export_onnx sets to "input")
+    import onnxruntime as ort
+    sess = ort.InferenceSession(str(fp_onnx_path), providers=["CPUExecutionProvider"])
+    input_name = sess.get_inputs()[0].name
+    del sess
+
+    reader = _TorchLoaderCalibReader(calib_loader, input_name=input_name,
+                                     n_batches=n_calib_batches)
+    quantize_static(
+        str(fp_onnx_path),
+        str(int8_onnx_path),
+        reader,
+        quant_format=QuantFormat.QDQ,
+        weight_type=QuantType.QInt8,
+        activation_type=QuantType.QInt8,
+        per_channel=True,
+    )
+    return int8_onnx_path
+
+
+def evaluate_onnx(onnx_path, loader, *, threshold: float = 0.5) -> dict:
+    """Evaluate an ONNX model on a data loader, returning the same metrics
+    schema as ``floodlite.metrics.compute_metrics`` (mean across batches)."""
+    import onnxruntime as ort
+    import numpy as np
+    from .metrics import compute_metrics
+
+    sess = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"])
+    in_name = sess.get_inputs()[0].name
+
+    keys = ("accuracy", "precision", "recall", "f1", "iou")
+    accum = {k: 0.0 for k in keys}
+    n = 0
+    for x, y in loader:
+        x_np = x.detach().cpu().numpy().astype("float32") if hasattr(x, "detach") else np.asarray(x, dtype="float32")
+        logits_np = sess.run(None, {in_name: x_np})[0]
+        logits = torch.from_numpy(logits_np)
+        m = compute_metrics(logits, y)
+        for k in keys:
+            accum[k] += getattr(m, k)
+        n += 1
+    return {k: accum[k] / max(n, 1) for k in keys}

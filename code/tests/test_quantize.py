@@ -69,3 +69,41 @@ def test_quantize_int8_forward_returns_fp32_logits():
         out = int8(torch.randn(1, 3, 256, 256))
     assert out.dtype == torch.float32
     assert out.shape == (1, 1, 256, 256)
+
+
+def test_onnx_static_quantization_runs_end_to_end(tmp_path):
+    """The recommended FloodLite quantization path: export to ONNX, calibrate,
+    produce an INT8 ONNX in QDQ format, run inference through onnxruntime CPU.
+
+    Works on PyTorch 2.7+ where eager-mode static PTQ fails (Conv2dSame issue).
+    """
+    from floodlite.quantize import (
+        quantize_int8_onnx_static,
+        evaluate_onnx,
+        file_size_mb,
+    )
+
+    fp32 = make_student("mobilenetv3_small").eval()
+    x = torch.randn(8, 3, 256, 256)
+    y = (torch.rand(8, 1, 256, 256) > 0.5).float()
+    loader = DataLoader(TensorDataset(x, y), batch_size=2)
+
+    fp_onnx = tmp_path / "fp32.onnx"
+    int8_onnx = tmp_path / "int8.onnx"
+    quantize_int8_onnx_static(
+        fp32,
+        fp_onnx_path=fp_onnx,
+        int8_onnx_path=int8_onnx,
+        calib_loader=loader,
+        n_calib_batches=2,
+    )
+    assert fp_onnx.exists()
+    assert int8_onnx.exists()
+    # INT8 should be at least 2× smaller (Conv weights dominate)
+    assert file_size_mb(int8_onnx) < file_size_mb(fp_onnx) / 2
+
+    # Round-trip inference: both ONNX models run, return FP32 metrics
+    m_fp = evaluate_onnx(fp_onnx, loader)
+    m_i8 = evaluate_onnx(int8_onnx, loader)
+    for k in ("accuracy", "precision", "recall", "f1", "iou"):
+        assert k in m_fp and k in m_i8
