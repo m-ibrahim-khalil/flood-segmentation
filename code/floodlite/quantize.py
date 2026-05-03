@@ -185,15 +185,22 @@ class _TorchLoaderCalibReader:
 
 
 def quantize_int8_onnx_static(model: nn.Module, *, fp_onnx_path, int8_onnx_path,
-                              calib_loader, n_calib_batches: int = 10,
+                              calib_loader, n_calib_batches: int = 25,
                               img_size: int = 256, opset: int = 17):
     """Static INT8 ONNX quantization in QDQ format with calibration.
 
     Workflow:
         1. Export ``model`` -> FP32 ONNX.
-        2. Calibrate using up to ``n_calib_batches`` batches from
-           ``calib_loader`` (drawn from the training distribution).
-        3. Emit an INT8 ONNX in QDQ format — QuantizeLinear/DequantizeLinear
+        2. Pre-process the FP32 ONNX (symbolic shape inference + BN-into-Conv
+           fusion + other graph optimisations). Without this step the
+           quantizer prints
+           "Please consider to run pre-processing before quantization"
+           and produces noticeably worse INT8 accuracy because BN weights
+           are quantized separately rather than absorbed into Conv weights.
+        3. Calibrate using up to ``n_calib_batches`` batches from
+           ``calib_loader`` (drawn from the training distribution); 25 batches
+           × batch_size 8 = 200 calibration images per the spec.
+        4. Emit an INT8 ONNX in QDQ format — QuantizeLinear/DequantizeLinear
            are placed around standard Conv/MatMul ops, so the resulting
            graph uses only ops with broad onnxruntime CPU support.
 
@@ -204,6 +211,7 @@ def quantize_int8_onnx_static(model: nn.Module, *, fp_onnx_path, int8_onnx_path,
     """
     from .export import export_onnx
     from onnxruntime.quantization import quantize_static, QuantType, QuantFormat
+    from onnxruntime.quantization.shape_inference import quant_pre_process
 
     fp_onnx_path = Path(fp_onnx_path)
     int8_onnx_path = Path(int8_onnx_path)
@@ -212,9 +220,20 @@ def quantize_int8_onnx_static(model: nn.Module, *, fp_onnx_path, int8_onnx_path,
 
     export_onnx(model, fp_onnx_path, img_size=img_size, opset=opset)
 
-    # Discover the ONNX input name (matches what export_onnx sets to "input")
+    # Pre-process: symbolic shape inference + Conv-BN fusion + cleanup. The
+    # output is what quantize_static actually consumes.
+    preproc_path = fp_onnx_path.with_name(fp_onnx_path.stem + "_preproc.onnx")
+    quant_pre_process(
+        input_model_path=str(fp_onnx_path),
+        output_model_path=str(preproc_path),
+        skip_optimization=False,
+        skip_onnx_shape=False,
+        skip_symbolic_shape=False,
+    )
+
+    # Discover the ONNX input name from the pre-processed model
     import onnxruntime as ort
-    sess = ort.InferenceSession(str(fp_onnx_path), providers=["CPUExecutionProvider"])
+    sess = ort.InferenceSession(str(preproc_path), providers=["CPUExecutionProvider"])
     input_name = sess.get_inputs()[0].name
     del sess
 
@@ -227,7 +246,7 @@ def quantize_int8_onnx_static(model: nn.Module, *, fp_onnx_path, int8_onnx_path,
     # quantization costs ~0.1-0.3 IoU points on Conv layers but works on
     # mixed CNN+ViT models.
     quantize_static(
-        str(fp_onnx_path),
+        str(preproc_path),
         str(int8_onnx_path),
         reader,
         quant_format=QuantFormat.QDQ,
