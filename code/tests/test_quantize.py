@@ -17,15 +17,19 @@ def cuda_loader():
     return DataLoader(TensorDataset(x, y), batch_size=2)
 
 
-# When CUDA is available this test repros the Fold-0 bug; when only CPU is available a separate
-# macOS/PyTorch 2.7 + SMP QuantStub interaction prevents forward inference, documented as a known
-# limitation in §10 of the spec.
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA-loader regression only meaningful on CUDA; macOS/PyTorch 2.7+SMP has separate QuantStub issue handled at deployment time.")
 def test_quantize_int8_runs_on_cpu_even_when_loader_is_cuda(cuda_loader):
-    """Repro for the Fold-0 bug: calibration loader on CUDA must not crash quantization."""
+    """Repro for the original Fold-0 bug + the QuantStub follow-on bug.
+
+    Two issues are exercised here:
+      1. Calibration loader yielding CUDA tensors must not crash quantization
+         (the original Fold-0 'CUDA backend' error).
+      2. The quantized model's forward pass must succeed on CPU — meaning the
+         QuantStub/DeQuantStub boundaries are correctly inserted (the
+         follow-on 'quantized::batch_norm2d' CPU-backend error that fired
+         once the CUDA bug was fixed).
+    """
     model = make_student("mobilenetv3_small")
     qmodel = quantize_int8(model, cuda_loader, n_calib_batches=1, device="cpu")
-    # Forward pass on CPU must succeed
     with torch.no_grad():
         out = qmodel(torch.randn(1, 3, 256, 256))
     assert out.shape == (1, 1, 256, 256)
@@ -39,3 +43,18 @@ def test_quantize_int8_reduces_size():
     loader = DataLoader(TensorDataset(x, y), batch_size=2)
     int8 = quantize_int8(fp32, loader, n_calib_batches=1)
     assert model_size_mb(int8) < model_size_mb(fp32) * 0.6  # at least 40% smaller
+
+
+def test_quantize_int8_forward_returns_fp32_logits():
+    """QuantWrapper's DeQuantStub must convert the int8 graph's output back to
+    FP32 so downstream code (compute_metrics, sigmoid, etc.) keeps working."""
+    fp32 = make_student("mobilenetv3_small")
+    x = torch.randn(2, 3, 256, 256)
+    y = torch.zeros(2, 1, 256, 256)
+    loader = DataLoader(TensorDataset(x, y), batch_size=2)
+    int8 = quantize_int8(fp32, loader, n_calib_batches=1)
+    int8.eval()
+    with torch.no_grad():
+        out = int8(torch.randn(1, 3, 256, 256))
+    assert out.dtype == torch.float32
+    assert out.shape == (1, 1, 256, 256)

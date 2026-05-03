@@ -1,13 +1,25 @@
 """Post-training INT8 quantization (PyTorch static quantization).
 
-INT8 PTQ in torch.ao.quantization requires the model and calibration inputs
-to live on CPU; running with CUDA tensors raises:
+PyTorch eager-mode static PTQ has two hard requirements that SMP UNet does
+not satisfy out of the box:
 
-    NotImplementedError: Could not run 'quantized::conv2d.new' with
-    arguments from the 'CUDA' backend.
+1. **CPU-only.** Calibration and conversion must run on CPU.
 
-This module forces both the model and the calibration tensors to CPU before
-`prepare()`, regardless of where the calibration loader yields them.
+       NotImplementedError: Could not run 'quantized::conv2d.new' with
+       arguments from the 'CUDA' backend.
+
+2. **Explicit quant boundaries.** The model must wrap its input in a
+   ``QuantStub`` (FP32 -> quint8) and its output in a ``DeQuantStub``
+   (quint8 -> FP32). Without these, ``convert()`` swaps in quantized ops
+   (e.g. ``quantized::batch_norm2d``) that then receive plain FP32 inputs
+   and raise:
+
+       Could not run 'quantized::batch_norm2d' with arguments from the
+       'CPU' backend.
+
+This module addresses both: forces CPU device for the model and calibration
+tensors, and wraps the model in ``QuantWrapper`` to provide the missing
+quant/dequant boundaries before ``prepare()`` runs.
 """
 from __future__ import annotations
 from pathlib import Path
@@ -16,6 +28,29 @@ import io
 
 import torch
 import torch.nn as nn
+import torch.ao.quantization as tq
+
+
+class QuantWrapper(nn.Module):
+    """Adds QuantStub/DeQuantStub boundaries around a float model.
+
+    PyTorch eager-mode static PTQ only quantizes the activations between a
+    ``QuantStub`` (input) and a ``DeQuantStub`` (output). SMP UNet has
+    neither, so without this wrapper the quantized graph has float inputs
+    feeding into quantized ops and crashes at the first quantized op.
+    """
+
+    def __init__(self, model: nn.Module):
+        super().__init__()
+        self.quant = tq.QuantStub()
+        self.model = model
+        self.dequant = tq.DeQuantStub()
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.quant(x)
+        x = self.model(x)
+        x = self.dequant(x)
+        return x
 
 
 def _ensure_quantized_engine() -> str:
@@ -28,7 +63,6 @@ def _ensure_quantized_engine() -> str:
     engine = torch.backends.quantized.engine
     if engine in ("x86", "onednn", "fbgemm"):
         return "x86"
-    # Fall back to qnnpack (ARM macOS, Raspberry Pi, or engine == 'none')
     torch.backends.quantized.engine = "qnnpack"
     return "qnnpack"
 
@@ -37,29 +71,34 @@ def quantize_int8(model: nn.Module, calib_loader, *, n_calib_batches: int = 25,
                   device: str = "cpu") -> nn.Module:
     """Apply post-training static INT8 quantization with calibration.
 
-    The calibration set should be drawn from the training distribution.
-    Both ``model`` and every batch yielded by ``calib_loader`` are moved to
-    CPU before quantization runs — this is mandatory for torch.ao.quantization.
+    Returns a ``QuantWrapper(model)`` whose internal model has been converted
+    to INT8. Forward calls accept FP32 input and return FP32 output, so
+    downstream code that does ``compute_metrics(logits, target)`` or
+    ``benchmark_latency(model)`` works unchanged.
     """
     if device != "cpu":
-        # Quietly enforce CPU; INT8 PTQ does not support CUDA.
+        # INT8 PTQ does not support CUDA — silently enforce CPU.
         device = "cpu"
 
     qconfig_str = _ensure_quantized_engine()
-    model = copy.deepcopy(model).to(device).eval()
-    model.qconfig = torch.ao.quantization.get_default_qconfig(qconfig_str)
-    torch.ao.quantization.prepare(model, inplace=True)
+
+    # Wrap with quant/dequant boundaries BEFORE prepare()
+    fp_model = copy.deepcopy(model).to(device).eval()
+    wrapped = QuantWrapper(fp_model).to(device).eval()
+    wrapped.qconfig = tq.get_default_qconfig(qconfig_str)
+
+    tq.prepare(wrapped, inplace=True)
 
     with torch.no_grad():
         for i, batch in enumerate(calib_loader):
             x = batch[0] if isinstance(batch, (list, tuple)) else batch
-            x = x.to(device).float()  # force CPU + FP32 regardless of loader
-            model(x)
+            x = x.to(device).float()
+            wrapped(x)
             if i + 1 >= n_calib_batches:
                 break
 
-    torch.ao.quantization.convert(model, inplace=True)
-    return model
+    tq.convert(wrapped, inplace=True)
+    return wrapped
 
 
 def save_quantized(model: nn.Module, path: str | Path) -> None:
