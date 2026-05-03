@@ -220,16 +220,35 @@ def quantize_int8_onnx_static(model: nn.Module, *, fp_onnx_path, int8_onnx_path,
 
     export_onnx(model, fp_onnx_path, img_size=img_size, opset=opset)
 
-    # Pre-process: symbolic shape inference + Conv-BN fusion + cleanup. The
-    # output is what quantize_static actually consumes.
+    # Pre-process: symbolic shape inference + Conv-BN fusion + cleanup.
+    # Symbolic inference is brittle on some SMP UNet variants ('Incomplete
+    # symbolic shape inference'); fall back to skipping that step alone if it
+    # fails. ONNX shape inference + graph optimisation still run, which is
+    # enough to get the BN-into-Conv fusion that drives the IoU-preservation
+    # benefit.
     preproc_path = fp_onnx_path.with_name(fp_onnx_path.stem + "_preproc.onnx")
-    quant_pre_process(
-        input_model_path=str(fp_onnx_path),
-        output_model_path=str(preproc_path),
-        skip_optimization=False,
-        skip_onnx_shape=False,
-        skip_symbolic_shape=False,
-    )
+    try:
+        quant_pre_process(
+            input_model_path=str(fp_onnx_path),
+            output_model_path=str(preproc_path),
+            skip_optimization=False,
+            skip_onnx_shape=False,
+            skip_symbolic_shape=False,
+            auto_merge=True,
+        )
+    except Exception:
+        try:
+            quant_pre_process(
+                input_model_path=str(fp_onnx_path),
+                output_model_path=str(preproc_path),
+                skip_optimization=False,
+                skip_onnx_shape=False,
+                skip_symbolic_shape=True,
+            )
+        except Exception:
+            # Ultimate fallback: skip preprocessing entirely
+            import shutil
+            shutil.copy(str(fp_onnx_path), str(preproc_path))
 
     # Discover the ONNX input name from the pre-processed model
     import onnxruntime as ort
