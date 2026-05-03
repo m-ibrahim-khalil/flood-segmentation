@@ -11,10 +11,28 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from urllib.parse import quote
 import json
+import ssl
 import sys
 import time
 
 import urllib.request
+
+
+# python.org's Python on macOS does not see the system cert bundle by default,
+# producing CERTIFICATE_VERIFY_FAILED on the very first HTTPS call. Build an
+# SSL context that prefers certifi's bundle when available, then falls back
+# to the OS truststore.
+def _make_ssl_context() -> ssl.SSLContext:
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return ssl.create_default_context()
+
+
+_SSL_CTX = _make_ssl_context()
+_HTTPS_HANDLER = urllib.request.HTTPSHandler(context=_SSL_CTX)
+_OPENER = urllib.request.build_opener(_HTTPS_HANDLER)
 
 
 BASE = "https://storage.googleapis.com"
@@ -29,7 +47,7 @@ def list_objects(prefix: str):
                f"?prefix={quote(prefix)}&maxResults=1000")
         if page_token:
             url += f"&pageToken={quote(page_token)}"
-        with urllib.request.urlopen(url) as r:
+        with _OPENER.open(url) as r:
             data = json.loads(r.read().decode())
         for it in data.get("items", []):
             yield it["name"], int(it.get("size", 0))
@@ -45,7 +63,12 @@ def download_one(name: str, dest_root: Path) -> tuple[str, bool, str]:
         return name, True, "skip-exists"
     url = f"{BASE}/{BUCKET}/{quote(name, safe='/')}"
     try:
-        urllib.request.urlretrieve(url, str(out))
+        with _OPENER.open(url) as r, open(out, "wb") as f:
+            while True:
+                chunk = r.read(1 << 16)
+                if not chunk:
+                    break
+                f.write(chunk)
         return name, True, "ok"
     except Exception as e:
         return name, False, f"err:{e}"
