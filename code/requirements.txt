@@ -12,6 +12,7 @@ torchprofile
 onnx
 onnxruntime
 onnxscript      # PyTorch 2.8+ dynamo-based torch.onnx.export needs this
+rasterio        # multi-band Sentinel-2 GeoTIFF read for Sen1Floods11 prep
 pytest>=7.0
 # optional (deployment)
 # coremltools
