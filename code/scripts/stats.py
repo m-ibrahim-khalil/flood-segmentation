@@ -42,25 +42,26 @@ def bootstrap_p(deltas, n_boot=1000, seed=42):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--summary", required=True, help="runs/3fold/summary.json")
-    ap.add_argument("--data_root", required=True)
+    ap.add_argument("--results", required=True,
+                    help="Single results.json with fold_0/fold_1/fold_2 keys "
+                         "(produced by run_full_experiment.py)")
+    ap.add_argument("--data_root", default=None,
+                    help="FSSD root for the per-image bootstrap. If omitted, only "
+                         "the 3-fold Wilcoxon is computed.")
     ap.add_argument("--ckpt_dir", required=True)
     ap.add_argument("--out", default="runs/3fold/stats.json")
     args = ap.parse_args()
 
-    summary = json.loads(Path(args.summary).read_text())
+    results = json.loads(Path(args.results).read_text())
 
     # ----- 3-fold Wilcoxon -----
     wilc = {}
     for sname in STUDENT_BACKBONES:
-        none_iou = []
-        comb_iou = []
-        # Reconstruct per-fold IoU from per-fold result files (mean=single fold)
+        none_iou, comb_iou = [], []
         for fold in (0, 1, 2):
-            f = json.loads(Path(args.ckpt_dir).parent.joinpath(
-                f"3fold/fold{fold}_results.json").read_text())
-            none_iou.append(f[f"fold_{fold}"]["students"][f"{sname}_none"]["iou"])
-            comb_iou.append(f[f"fold_{fold}"]["students"][f"{sname}_comb"]["iou"])
+            students = results[f"fold_{fold}"]["students"]
+            none_iou.append(students[f"{sname}_none"]["iou"])
+            comb_iou.append(students[f"{sname}_comb"]["iou"])
         try:
             stat, p = wilcoxon(none_iou, comb_iou)
             wilc[f"{sname}_none_vs_comb"] = {
@@ -71,29 +72,49 @@ def main():
         except ValueError as e:
             wilc[f"{sname}_none_vs_comb"] = {"n": 3, "error": str(e)}
 
-    # ----- Fold-0 paired pixel-bootstrap -----
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    _, va = make_loaders(args.data_root, fold=0, batch_size=8)
-    boot = {}
-    for sname in STUDENT_BACKBONES:
-        s_none = make_student(sname).to(device)
-        s_none.load_state_dict(torch.load(
-            Path(args.ckpt_dir) / f"{sname}_none_fold0.pt", map_location=device))
-        s_comb = make_student(sname).to(device)
-        s_comb.load_state_dict(torch.load(
-            Path(args.ckpt_dir) / f"{sname}_comb_fold0.pt", map_location=device))
-        none_per = per_image_iou(s_none, va, device)
-        comb_per = per_image_iou(s_comb, va, device)
-        deltas = none_per - comb_per
-        boot[f"{sname}_none_vs_comb"] = {
-            "n": len(deltas),
-            "mean_delta": float(deltas.mean()),
-            "p_one_sided_no_kd_better": bootstrap_p(deltas),
-        }
+    # ----- Fold-0 paired pixel-bootstrap (optional, needs FSSD locally) -----
+    boot = None
+    if args.data_root and Path(args.data_root).exists():
+        try:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            _, va = make_loaders(args.data_root, fold=0, batch_size=8)
+            boot = {}
+            for sname in STUDENT_BACKBONES:
+                s_none = make_student(sname).to(device)
+                s_none.load_state_dict(torch.load(
+                    Path(args.ckpt_dir) / f"{sname}_none_fold0.pt", map_location=device))
+                s_comb = make_student(sname).to(device)
+                s_comb.load_state_dict(torch.load(
+                    Path(args.ckpt_dir) / f"{sname}_comb_fold0.pt", map_location=device))
+                none_per = per_image_iou(s_none, va, device)
+                comb_per = per_image_iou(s_comb, va, device)
+                deltas = none_per - comb_per
+                boot[f"{sname}_none_vs_comb"] = {
+                    "n": int(len(deltas)),
+                    "mean_delta": float(deltas.mean()),
+                    "p_one_sided_no_kd_better": bootstrap_p(deltas),
+                }
+        except Exception as e:
+            boot = {"error": f"bootstrap skipped: {e}"}
+    else:
+        boot = {"skipped_reason": "no --data_root provided or path missing"}
 
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-    Path(args.out).write_text(json.dumps({"wilcoxon_3fold": wilc, "bootstrap_fold0": boot}, indent=2))
+    out = {"wilcoxon_3fold": wilc, "bootstrap_fold0": boot}
+    Path(args.out).write_text(json.dumps(out, indent=2))
     print(f"Wrote {args.out}")
+    print()
+    print("=== Wilcoxon (3-fold paired) ===")
+    for k, v in wilc.items():
+        if "error" in v:
+            print(f"  {k}: {v['error']}")
+        else:
+            print(f"  {k}: mean Δ={v['mean_delta']:+.4f}  p={v['p_value']:.4f}")
+    if boot and "skipped_reason" not in boot and "error" not in boot:
+        print()
+        print("=== Bootstrap (fold-0 per-image, n=1000) ===")
+        for k, v in boot.items():
+            print(f"  {k}: mean Δ={v['mean_delta']:+.4f}  p_one_sided={v['p_one_sided_no_kd_better']:.4f}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,28 @@
+{
+  "wilcoxon_3fold": {
+    "mobilenetv3_small_none_vs_comb": {
+      "n": 3,
+      "p_value": 0.5,
+      "stat": 1.0,
+      "mean_delta": 0.0026661029048994,
+      "note": "n=3 -> minimum two-sided p \u2248 0.25 (low power)"
+    },
+    "efficientnet_lite0_none_vs_comb": {
+      "n": 3,
+      "p_value": 1.0,
+      "stat": 3.0,
+      "mean_delta": 0.0013422218023562509,
+      "note": "n=3 -> minimum two-sided p \u2248 0.25 (low power)"
+    },
+    "mobilevit_xxs_none_vs_comb": {
+      "n": 3,
+      "p_value": 0.25,
+      "stat": 0.0,
+      "mean_delta": 0.004932519267587088,
+      "note": "n=3 -> minimum two-sided p \u2248 0.25 (low power)"
+    }
+  },
+  "bootstrap_fold0": {
+    "skipped_reason": "no --data_root provided or path missing"
+  }
+}
