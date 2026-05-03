@@ -47,16 +47,43 @@ def make_teacher(num_classes: int = 1) -> nn.Module:
 
 
 def make_student(name: str, num_classes: int = 1) -> nn.Module:
-    """Build one of the three lightweight UNet students."""
+    """Build one of the three lightweight UNet students.
+
+    For ``mobilevit_xxs`` we attempt the version-detected encoder name first,
+    then fall back to the alternate prefix if smp rejects it. This keeps the
+    code working when the version detection misreads (e.g., on a dev wheel)
+    or when a future smp version reshuffles encoder routing.
+    """
     if name not in STUDENT_BACKBONES:
         raise ValueError(f"Unknown student '{name}'. Choose from {list(STUDENT_BACKBONES)}")
-    return smp.Unet(
-        encoder_name=STUDENT_BACKBONES[name],
-        encoder_weights="imagenet",
-        in_channels=3,
-        classes=num_classes,
-        activation=None,
-    )
+    encoder_name = STUDENT_BACKBONES[name]
+    try:
+        return smp.Unet(
+            encoder_name=encoder_name,
+            encoder_weights="imagenet",
+            in_channels=3,
+            classes=num_classes,
+            activation=None,
+        )
+    except KeyError:
+        if name != "mobilevit_xxs":
+            raise
+        # Try the alternate MobileViT prefix
+        alt = "tu-mobilevit_xxs" if encoder_name.startswith("timm-") else "timm-mobilevit_xxs"
+        try:
+            return smp.Unet(
+                encoder_name=alt,
+                encoder_weights="imagenet",
+                in_channels=3,
+                classes=num_classes,
+                activation=None,
+            )
+        except KeyError as e:
+            raise RuntimeError(
+                f"Cannot load MobileViT-XXS under either '{encoder_name}' or '{alt}'. "
+                f"Installed smp version {smp.__version__} does not support it. "
+                "Upgrade with: pip install --upgrade 'segmentation_models_pytorch>=0.4.0'"
+            ) from e
 
 
 def make_baseline_mobilenetv2(num_classes: int = 1) -> nn.Module:

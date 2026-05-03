@@ -1,7 +1,7 @@
 torch>=2.2
 torchvision>=0.17
-segmentation_models_pytorch>=0.3.4,<0.6   # 0.5.x ships on current Kaggle; 0.3.x on legacy Kaggle. floodlite.models adapts.
-timm>=0.9.7                                  # 0.9.x for smp 0.3.x, 1.0.x for smp 0.5.x
+segmentation_models_pytorch>=0.4.0,<0.6   # MobileViT-XXS requires smp>=0.4 (tu- prefix); 0.3.x has no MobileViT.
+timm>=0.9.7,<2.0                            # smp 0.4.x needs timm 1.0+; pin upper to avoid future breaks.
 albumentations==1.4.18
 opencv-python-headless
 scikit-learn
