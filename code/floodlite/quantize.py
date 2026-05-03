@@ -258,12 +258,19 @@ def quantize_int8_onnx_static(model: nn.Module, *, fp_onnx_path, int8_onnx_path,
 
     reader = _TorchLoaderCalibReader(calib_loader, input_name=input_name,
                                      n_batches=n_calib_batches)
-    # per_channel=False is required for ViT-style models (MobileViT). LayerNorm
-    # weights are rank-1 (shape [C]); the per-channel quantizer assumes axis-1
-    # exists and silently produces broken weights for those layers, which on
-    # MobileViT-XXS dropped IoU from 0.89 to 0.66 in our tests. Per-tensor
-    # quantization costs ~0.1-0.3 IoU points on Conv layers but works on
-    # mixed CNN+ViT models.
+    # Calibration method: Percentile (clip extremes at 99.999%) is much more
+    # robust to activation outliers than MinMax. The 3-fold Kaggle sweep with
+    # MinMax produced wildly inconsistent INT8 IoU (mobilenetv3_small dropped
+    # to 0.0002 in fold-1 vs 0.59 in fold-2). MobileNetV3's HardSwish and
+    # MobileViT's attention both produce occasional large activations that
+    # MinMax interprets as the full quantization range, dropping resolution
+    # for the bulk of the activation distribution. Percentile is the
+    # standard fix.
+    #
+    # per_channel=False is required for ViT-style models (MobileViT).
+    # LayerNorm weights are rank-1; the per-channel quantizer assumes axis-1
+    # exists and silently produces broken weights for those layers.
+    from onnxruntime.quantization.calibrate import CalibrationMethod
     quantize_static(
         str(preproc_path),
         str(int8_onnx_path),
@@ -273,6 +280,11 @@ def quantize_int8_onnx_static(model: nn.Module, *, fp_onnx_path, int8_onnx_path,
         activation_type=QuantType.QInt8,
         per_channel=False,
         op_types_to_quantize=["Conv", "Gemm", "MatMul"],
+        calibrate_method=CalibrationMethod.Percentile,
+        extra_options={
+            "CalibPercentile": 99.999,
+            "CalibMaxIntermediateOutputs": 50,
+        },
     )
     return int8_onnx_path
 
