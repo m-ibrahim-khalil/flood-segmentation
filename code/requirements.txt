@@ -11,6 +11,7 @@ tqdm
 torchprofile
 onnx
 onnxruntime
+onnxscript      # PyTorch 2.8+ dynamo-based torch.onnx.export needs this
 pytest>=7.0
 # optional (deployment)
 # coremltools
