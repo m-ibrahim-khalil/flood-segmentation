@@ -13,10 +13,25 @@ import segmentation_models_pytorch as smp
 
 
 TEACHER_BACKBONE = "efficientnet-b0"  # smp encoder name
+
+
+def _mobilevit_encoder_name() -> str:
+    """Pick a MobileViT-XXS encoder name that works on the installed smp version.
+
+    smp 0.3.x ships ``mobilevit_xxs`` as a static encoder addressable via the
+    ``timm-`` prefix. smp 0.4+ removed the static entry; the encoder is only
+    reachable through the timm-universal (``tu-``) dynamic prefix instead.
+    Kaggle's base image has ranged across both over time, so we detect at
+    import and pick the form that resolves.
+    """
+    smp_version = tuple(int(p) for p in smp.__version__.split(".")[:2])
+    return "tu-mobilevit_xxs" if smp_version >= (0, 4) else "timm-mobilevit_xxs"
+
+
 STUDENT_BACKBONES = {
     "mobilenetv3_small": "timm-mobilenetv3_small_100",
     "efficientnet_lite0": "timm-tf_efficientnet_lite0",
-    "mobilevit_xxs":      "timm-mobilevit_xxs",
+    "mobilevit_xxs":      _mobilevit_encoder_name(),
 }
 
 
