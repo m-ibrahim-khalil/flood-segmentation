@@ -93,28 +93,56 @@ def get_iou(summary: dict, key: str) -> float | None:
 def get_p50_ms(lat: dict, key: str) -> float | None:
     """Extract p50 latency (ms) for a model key from a lat JSON.
 
-    The lat JSON is expected to have one of these layouts:
-      { "<key>": { "p50": <float>, ... } }
-    or the flat layout from bench_m2.py:
-      { "<key>": { "fp32": { "p50_ms": <float> }, "int8": { "p50_ms": <float> } } }
-    We try both.
+    Tries several legal entry shapes:
+      1. { "<key>": { "p50_ms": <float> } }              ← bench_m2/graviton/wasm
+      2. { "<key>": { "p50":    <float> } }              ← legacy / WASM HTML
+      3. { "<key>": { "fp32":   { "p50_ms": <float> } }} ← nested variant
+    Returns the first match or None.
     """
     entry = lat.get(key)
     if entry is None:
         return None
-    # Layout A: flat { "p50": <float> }
+    if "p50_ms" in entry:
+        return float(entry["p50_ms"])
     if "p50" in entry:
         return float(entry["p50"])
-    # Layout B: { "fp32": { "p50_ms": <float> } }
     fp32 = entry.get("fp32", {})
     if "p50_ms" in fp32:
         return float(fp32["p50_ms"])
     return None
 
 
-def _lat_key_for(config: str) -> str:
-    """Map ARCH config name to the key used in lat JSONs."""
-    return config  # assumed to match; override here if needed
+def _candidate_lat_keys(config: str) -> list[str]:
+    """Map ARCH config to all key shapes used by the various benchmark scripts.
+
+    Order matters: prefer the *deployable* path (ONNX-RT) over PyTorch CPU,
+    and the *student-only no-KD* path over flat names.
+    """
+    if config == "teacher":
+        # No teacher.onnx is exported by quantize_all.py, so we usually only have
+        # the PyTorch CPU number on M2.
+        return ["teacher_ort_cpu", "teacher_pt_cpu", "teacher", "teacher_fp32"]
+    # config looks like "mobilenetv3_small_none" — strip the KD suffix for the
+    # latency lookup since the deployable model is the no-KD variant.
+    arch = config.replace("_none", "").replace("_resp", "") \
+                 .replace("_feat", "").replace("_comb", "")
+    return [
+        f"{arch}_fp32_ort_cpu",     # bench_m2 ORT FP32 (preferred)
+        f"{arch}_pt_cpu_fp32",      # bench_m2 PyTorch CPU FP32 fallback
+        f"{arch}_fp32",             # graviton/wasm flat names
+        arch,                       # raw architecture name as last resort
+    ]
+
+
+def _lat_lookup_any(lat: dict | None, config: str) -> float | None:
+    """Try every candidate key and return the first p50_ms hit."""
+    if lat is None:
+        return None
+    for key in _candidate_lat_keys(config):
+        v = get_p50_ms(lat, key)
+        if v is not None:
+            return v
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -152,10 +180,13 @@ def build_f2(
         {
             "xlabel": "Apple M2 p50 (ms)",
             "data": (
-                {k: get_p50_ms(lat_m2, _lat_key_for(k)) for k in CONFIGS}
+                {k: _lat_lookup_any(lat_m2, k) for k in CONFIGS}
                 if lat_m2 is not None else None
             ),
-            "placeholder": "Awaiting Phase C output:\nlat_m2.json missing",
+            "placeholder": (
+                None if lat_m2 is not None
+                else "Awaiting Phase C output:\nlat_m2.json missing"
+            ),
         },
         {
             "xlabel": (
@@ -163,10 +194,10 @@ def build_f2(
                 else "AWS Graviton p50 (ms)"
             ),
             "data": (
-                {k: get_p50_ms(lat_graviton, _lat_key_for(k)) for k in CONFIGS}
+                {k: _lat_lookup_any(lat_graviton, k) for k in CONFIGS}
                 if lat_graviton is not None
                 else (
-                    {k: get_p50_ms(lat_wasm, _lat_key_for(k)) for k in CONFIGS}
+                    {k: _lat_lookup_any(lat_wasm, k) for k in CONFIGS}
                     if use_wasm_as_4th else None
                 )
             ),
@@ -284,25 +315,27 @@ def build_f4(
     # Gather per-platform data
     platforms: list[dict] = []
 
-    def _collect_platform(lat: dict | None, label: str, key_suffix_fp32: str = "fp32", key_suffix_int8: str = "int8") -> None:
+    def _collect_platform(lat: dict | None, label: str) -> None:
+        """Build FP32/INT8 FPS lists for the 3 students under multiple key shapes.
+
+        bench_m2.py:   {arch}_fp32_ort_cpu / {arch}_int8_ort_cpu (preferred)
+                       {arch}_pt_cpu_fp32 (PyTorch CPU fallback)
+        bench_graviton/wasm: {arch}_fp32 / {arch}_int8 (flat)
+        """
         if lat is None:
             return
         fp32_fps: list[float | None] = []
         int8_fps: list[float | None] = []
         for cfg in STUDENTS_F4:
-            entry = lat.get(cfg)
-            if entry is None:
-                fp32_fps.append(None)
-                int8_fps.append(None)
-                continue
-            # Layout A: flat { "p50": <float> } → treat as FP32 only
-            if "p50" in entry:
-                fp32_fps.append(_fps(entry["p50"]))
-                int8_fps.append(None)
-            else:
-                fp32_fps.append(_fps(entry.get(key_suffix_fp32, {}).get("p50_ms")))
-                int8_fps.append(_fps(entry.get(key_suffix_int8, {}).get("p50_ms")))
-
+            arch = cfg.replace("_none", "")
+            fp32_keys = [f"{arch}_fp32_ort_cpu", f"{arch}_pt_cpu_fp32", f"{arch}_fp32"]
+            int8_keys = [f"{arch}_int8_ort_cpu", f"{arch}_int8"]
+            fp32_ms = next((get_p50_ms(lat, k) for k in fp32_keys
+                            if get_p50_ms(lat, k) is not None), None)
+            int8_ms = next((get_p50_ms(lat, k) for k in int8_keys
+                            if get_p50_ms(lat, k) is not None), None)
+            fp32_fps.append(_fps(fp32_ms))
+            int8_fps.append(_fps(int8_ms))
         if any(v is not None for v in fp32_fps + int8_fps):
             platforms.append({"label": label, "fp32": fp32_fps, "int8": int8_fps})
 

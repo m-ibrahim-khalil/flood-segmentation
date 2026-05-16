@@ -365,11 +365,41 @@ def build_t5(runs_dir: Path) -> tuple[str, str]:
     headers = ["Model"] + [f"{p} — {s}" for p, _ in platform_cols for s in sub_headers]
     rows = []
 
+    def _lookup(pdata: dict, model_key: str) -> dict | None:
+        """Find a latency entry under multiple legal key shapes.
+
+        bench_m2.py writes:
+          teacher_pt_cpu                       <- PyTorch CPU (no ORT for teacher)
+          {sname}_pt_cpu_fp32                  <- PyTorch CPU FP32
+          {sname}_{fp32|int8}_ort_cpu          <- ONNX Runtime CPU
+
+        bench_graviton.sh writes:
+          {sname}_{fp32|int8}                  <- flat names
+
+        bench_wasm.html writes:
+          {sname}_{fp32|int8}                  <- flat names
+
+        We prefer ONNX-RT over PyTorch CPU when both exist (it's the
+        deployable path) and fall back through the recognised shapes.
+        """
+        if pdata is None:
+            return None
+        if model_key == "teacher_fp32":
+            return pdata.get("teacher_ort_cpu") or pdata.get("teacher_pt_cpu") or pdata.get("teacher")
+        candidates = [
+            model_key,                         # graviton/wasm flat names
+            f"{model_key}_ort_cpu",            # bench_m2 ORT keys
+            f"{model_key.replace('_fp32', '_pt_cpu_fp32')}",  # bench_m2 PyTorch keys
+        ]
+        for c in candidates:
+            if c in pdata:
+                return pdata[c]
+        return None
+
     for model_key in _T5_MODELS:
         row = [model_key.replace("_", " ")]
         for platform_name, _ in platform_cols:
-            pdata = lat_data[platform_name]
-            entry = pdata.get(model_key) if pdata else None
+            entry = _lookup(lat_data[platform_name], model_key)
             if entry:
                 p50 = entry.get("p50_ms")
                 p95 = entry.get("p95_ms")
