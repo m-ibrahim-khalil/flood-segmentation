@@ -5,6 +5,15 @@
 \section{Materials and Methods}
 \label{sec:methods}
 
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{figures/F1_pipeline.pdf}
+\caption{\textbf{FloodLite training-and-deployment pipeline.} Train teacher (UNet$+$EfficientNet-B0) $\rightarrow$ train students (three lightweight backbones $\times$ four KD configurations) $\rightarrow$ INT8-quantize the no-KD students via ONNX static QDQ $\rightarrow$ benchmark FP32 and INT8 on Apple M2~Pro CPU and in browser WebAssembly. Each stage produces an artifact consumed by the next; the same \texttt{.onnx} file is benchmarked under two execution providers (ONNX Runtime CPU on M2~Pro; ONNX Runtime Web WASM SIMD in the browser).}
+\label{fig:f1-pipeline}
+\end{figure*}
+
+Figure~\ref{fig:f1-pipeline} summarises the four-stage workflow. The remainder of this section details each stage.
+
 \subsection{Dataset}
 \label{sec:methods-data}
 
