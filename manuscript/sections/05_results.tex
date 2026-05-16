@@ -62,12 +62,12 @@ Three remarks. First, \emph{all three students offer a $7$--$19\times$ speedup o
 \subsection{Pareto Analysis}
 \label{sec:results-pareto}
 
-\begin{figure}[ht]
+\begin{figure*}[ht]
 \centering
-\includegraphics[width=0.95\linewidth]{figures/F2_pareto.pdf}
+\includegraphics[width=0.92\linewidth]{figures/F2_pareto.pdf}
 \caption{\textbf{Pareto frontier on four deployment-relevant axes.} IoU vs.~$\{$Params, FP32 ONNX size, M2~Pro p50, WASM p50$\}$. The \textbf{EfficientNet-Lite0 INT8} configuration is on the Pareto frontier on the parameter, M2-latency, and WASM-latency axes simultaneously; \textbf{MobileViT-XXS no-KD FP32} is Pareto-optimal on the accuracy axis but not deployable as INT8 under the current static QDQ recipe.}
 \label{fig:f2-pareto}
-\end{figure}
+\end{figure*}
 
 The Pareto front therefore identifies two distinct deployment operating points:
 
@@ -78,30 +78,30 @@ The Pareto front therefore identifies two distinct deployment operating points:
 
 We recommend the latter for unattended flood-mapping pipelines ($1.6\times$ throughput, $2.3\times$ smaller binary) and the former for human-in-the-loop applications where the 5.2-point IoU drop matters.
 
-\begin{figure}[ht]
+\begin{figure*}[ht]
 \centering
-\includegraphics[width=0.95\linewidth]{figures/F4_throughput.png}
+\includegraphics[width=0.92\linewidth]{figures/F4_throughput.png}
 \caption{\textbf{Per-platform throughput, FP32 vs.~INT8.} Frames-per-second on M2~Pro (left) and browser WASM SIMD (right); INT8 entries are unsupported on ORT-Web 1.17.}
 \label{fig:f4-throughput}
-\end{figure}
+\end{figure*}
 
 \subsection{Pipeline Diagram and Qualitative Examples}
 \label{sec:results-pipeline}
 
-\begin{figure}[ht]
+\begin{figure*}[ht]
 \centering
 % Placeholder until F1_pipeline.pdf is finalised (PowerPoint / draw.io export).
-\fbox{\parbox{0.85\linewidth}{\centering \emph{Figure placeholder.} F1\_pipeline.pdf is generated manually (PowerPoint or draw.io) and dropped into \texttt{manuscript/figures/}. Layout: $\text{train teacher} \rightarrow \text{distill students (ablation)} \rightarrow \text{quantize INT8} \rightarrow \text{benchmark on M2 CPU + WASM}$.\\[4pt]}}
-\caption{\textbf{FloodLite pipeline.} Train teacher (UNet+EffB0) $\rightarrow$ train students (3 backbones $\times$ 4 KD configs) $\rightarrow$ INT8-quantize the no-KD students via ONNX static QDQ $\rightarrow$ benchmark FP32 and INT8 on M2~Pro CPU and browser WASM.}
+\fbox{\parbox{0.85\linewidth}{\centering \emph{Figure placeholder.} F1\_pipeline.pdf is generated manually (PowerPoint or draw.io) and dropped into \texttt{manuscript/figures/}. Layout: train teacher $\rightarrow$ distill students (ablation) $\rightarrow$ quantize INT8 $\rightarrow$ benchmark on M2 CPU $+$ WASM.\\[4pt]}}
+\caption{\textbf{FloodLite pipeline.} Train teacher (UNet$+$EffB0) $\rightarrow$ train students (3 backbones $\times$ 4 KD configs) $\rightarrow$ INT8-quantize the no-KD students via ONNX static QDQ $\rightarrow$ benchmark FP32 and INT8 on M2~Pro CPU and browser WASM.}
 \label{fig:f1-pipeline}
-\end{figure}
+\end{figure*}
 
-\begin{figure}[ht]
+\begin{figure*}[ht]
 \centering
 % Placeholder until F3_qualitative.pdf is rendered by scripts/make_qualitative.py.
 \fbox{\parbox{0.85\linewidth}{\centering \emph{Figure placeholder.} F3\_qualitative.pdf is rendered by \texttt{scripts/make\_qualitative.py} once FSSD is on the rendering host; supplementary material.\\[4pt]}}
 \caption{\textbf{Qualitative panel} (supplementary). Two rows $\times$ five columns: input, GT, teacher FP32 prediction, EfficientNet-Lite0 INT8 prediction, error map (TP/FP/FN). The easy row is the highest-IoU fold-0 validation image under the deployable model; the hard row is the lowest-IoU image with $\geq 2\%$ flood-pixel coverage.}
 \label{fig:f3-qualitative}
-\end{figure}
+\end{figure*}
 
 Two persistent failure modes shared by teacher and student are visible in the hard row of Figure~\ref{fig:f3-qualitative}: wet asphalt confused with water, and under-segmentation of vegetation-occluded flood edges. We return to these in Section~\ref{sec:discussion-failures}.

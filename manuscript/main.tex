@@ -11,7 +11,11 @@
 %  Status: v2 draft (post edge-benchmark pivot, 2026-05-16).
 % =====================================================================
 
-\documentclass[preprint,review,12pt]{elsarticle}
+% IJDRR camera-ready style: Elsevier two-column journal format
+% (final, 3p = double-column, times font).  Use [preprint,review,12pt]
+% during review-with-line-numbers; switch to [final,3p,times] for the
+% submission-ready look that matches what published IJDRR papers look like.
+\documentclass[final,3p,times,twocolumn]{elsarticle}
 
 % ---------- Packages ----------
 \usepackage[T1]{fontenc}
@@ -30,7 +34,7 @@
 \usepackage{multirow}
 \usepackage{siunitx}
 \sisetup{detect-weight=true,detect-family=true}
-\usepackage{lineno}              % review-mode line numbers
+\usepackage{microtype}            % subtle character protrusion + font expansion
 
 % ---------- Macros for FloodLite numbers ----------
 % Headline numbers; update here and they propagate through the text.
@@ -56,6 +60,10 @@
 \journal{International Journal of Disaster Risk Reduction}
 
 \begin{document}
+
+% Allow TeX to break lines more loosely; tight column justification
+% with long \texttt{} paths otherwise produces huge inter-word gaps.
+\sloppy
 
 \begin{frontmatter}
 
@@ -84,8 +92,6 @@ flood segmentation \sep edge deployment \sep knowledge distillation \sep post-tr
 \end{keyword}
 
 \end{frontmatter}
-
-\linenumbers
 
 % --- Body sections ---
 \input{sections/01_introduction}

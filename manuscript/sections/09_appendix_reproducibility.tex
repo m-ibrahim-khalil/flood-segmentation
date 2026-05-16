@@ -5,21 +5,25 @@
 \section{Reproducibility}
 \label{sec:appendix-repro}
 
+\footnotesize
 \sloppy
-We provide the following artifacts for reproducibility:
+\setlength{\emergencystretch}{3em}
 
-\begin{itemize}
-\item \textbf{Code repository:} \url{https://github.com/[your-username]/Flood_segmentation_model} (MIT). The \texttt{v1.0-ijdrr} tag is the camera-ready commit. Zenodo DOI: [DOI to be minted at submission].
-\item \textbf{Pre-trained checkpoints:} \texttt{best\_*.pt} (PyTorch state-dicts) under \texttt{code/runs/3fold/}. 14 configurations $\times$ 3 folds $= 42$ checkpoints. Total $\sim 700$\,MB.
-\item \textbf{ONNX exports:} per-fold \texttt{\{arch\}\_fold\{0,1,2\}\_\{fp32,int8\}.onnx} under \texttt{code/exports/}, for \texttt{\{teacher, mobilenetv3\_small, efficientnet\_lite0, mobilevit\_xxs\}}. Total $\sim 150$\,MB.
-\item \textbf{Per-fold metrics:} \texttt{results.json} (FP32) and \texttt{quantized.json} (INT8) under \texttt{code/runs/3fold/}. Re-derivable by \texttt{run\_full\_experiment.py} with \texttt{-{}-fold \{0,1,2\}} and \texttt{-{}-include\_baseline}.
-\item \textbf{Per-platform latency:} \texttt{lat\_m2.json} and \texttt{lat\_wasm.json} under \texttt{code/runs/3fold/}. Re-derivable by \texttt{scripts/bench\_m2.py} and \texttt{bench.mjs} respectively.
+We provide the following artifacts for reproducibility.
+
+\paragraph{Artifacts.}
+\begin{itemize}\setlength\itemsep{2pt}
+\item \textbf{Code repository} (MIT licence) at \url{github.com/[your-username]/Flood_segmentation_model}; the \texttt{v1.0-ijdrr} tag is the camera-ready commit. Zenodo DOI: [to be minted at submission].
+\item \textbf{Pre-trained checkpoints} (\texttt{*.pt} PyTorch state-dicts) under \texttt{code/runs/3fold/}: 14 configurations $\times$ 3 folds $= 42$ checkpoints, $\sim 700$\,MB total.
+\item \textbf{ONNX exports} (FP32 and INT8, per fold) for teacher and three students under \texttt{code/exports/}; $\sim 150$\,MB total.
+\item \textbf{Per-fold metrics} in \texttt{results.json} (FP32) and \texttt{quantized.json} (INT8) under \texttt{code/runs/3fold/}; re-derivable by \texttt{run\_full\_experiment.py}.
+\item \textbf{Per-platform latency} in \texttt{lat\_m2.json} and \texttt{lat\_wasm.json}; re-derivable by \texttt{bench\_m2.py} and \texttt{bench.mjs} respectively.
 \end{itemize}
 
-\paragraph{Reproducibility metadata.}
-\begin{itemize}
-\item Random seed: 42 (fixed in \texttt{floodlite/utils.py} and in the \texttt{KFold} constructor).
-\item Python 3.11. PyTorch 2.8 with CUDA 12.1 (Kaggle T4) or Apple-Silicon MPS (M2 export and quantize). \texttt{segmentation-models-pytorch} $\geq 0.4, <0.6$; \texttt{timm} 1.0; \texttt{onnxruntime} 1.17; \texttt{onnxruntime-web} 1.17.3.
-\item Hardware: Training on a single Kaggle Tesla T4 (16\,GB). Quantization and CPU latency on an Apple M2~Pro (10-core CPU, 16\,GB unified memory, macOS 25.2). WASM latency via Node.js~25.
-\item Estimated reproduction cost: $\sim 35$\,hours of Kaggle T4 free-tier compute (within the 30-hour-per-week quota across two folds of the 3-fold sweep) $+ \sim 2$\,hours of M2 CPU time for quantization and benchmarking. Total wall-clock: $\approx 3$ calendar days assuming no Kaggle queue.
+\paragraph{Environment.}
+\begin{itemize}\setlength\itemsep{2pt}
+\item Random seed: 42, fixed in \texttt{floodlite/utils.py} and in the \texttt{KFold} constructor.
+\item Software: Python 3.11; PyTorch 2.8 with CUDA 12.1 (Kaggle T4) or Apple-Silicon MPS (M2); \texttt{segmentation-models-pytorch} $\geq 0.4$; \texttt{timm} 1.0; \texttt{onnxruntime} 1.17; \texttt{onnxruntime-web} 1.17.3.
+\item Hardware: training on a single Kaggle Tesla T4 (16\,GB); quantization and CPU latency on an Apple M2~Pro (10-core CPU, 16\,GB unified memory, macOS 25.2); WASM latency via Node.js~25.
+\item Estimated reproduction cost: $\sim 35$ Kaggle-T4 hours $+ \sim 2$ M2-CPU hours; wall-clock $\approx 3$ calendar days assuming no Kaggle queue.
 \end{itemize}

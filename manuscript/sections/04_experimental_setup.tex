@@ -15,7 +15,7 @@ ONNX export, INT8 quantization, and CPU/WASM latency benchmarks run locally on a
 \subsection{Cross-Validation Protocol}
 \label{sec:setup-cv}
 
-We use 3-fold cross-validation with \texttt{sklearn.model\_selection.KFold(n\_splits=5,\,shuffle=True,\,random\_state=42)}, evaluating only folds 0--2 of the 5-fold partition to bound compute. The same fold indices are used for every $(\text{model} \times \text{KD configuration})$ combination, so all IoU comparisons in Tables~\ref{tab:t2-segmentation}--\ref{tab:t5-latency} are \emph{paired} across folds.
+We use 3-fold cross-validation with \texttt{sklearn.\allowbreak{}model\_selection.\allowbreak{}KFold(n\_splits=5,\allowbreak\,shuffle=True,\allowbreak\,random\_state=42)}, evaluating only folds 0--2 of the 5-fold partition to bound compute. The same fold indices are used for every $(\text{model} \times \text{KD configuration})$ combination, so all IoU comparisons in Tables~\ref{tab:t2-segmentation}--\ref{tab:t5-latency} are \emph{paired} across folds.
 
 \subsection{Metrics}
 \label{sec:setup-metrics}
@@ -31,8 +31,8 @@ For each $(\text{model} \times \text{KD configuration})$, we report mean $\pm$ s
 \label{sec:setup-latency}
 
 \begin{itemize}
-\item \textbf{Apple M2~Pro / ONNX Runtime 1.17 CPU EP:} \texttt{scripts/bench\_m2.py}. Single-threaded by default; sessions created with \texttt{intra\_op\_num\_threads = inter\_op\_num\_threads = 1}. 20 warm-up $+$ 200 timed runs.
-\item \textbf{Browser WebAssembly SIMD / ONNX Runtime Web 1.17 from Node.js~25:} \texttt{bench.mjs} (supplementary). \texttt{ort.env.wasm.numThreads = 1; ort.env.wasm.simd = true}. 20 warm-up $+$ 200 timed runs. Equivalent in-browser numbers (Chrome 130, macOS 25.2) were verified to fall within $\pm 10\%$ in pilot runs.
+\item \textbf{Apple M2~Pro / ONNX Runtime 1.17 CPU EP:} \texttt{scripts/bench\_m2.py}. Single-threaded by default; sessions created with the intra-op and inter-op thread counts both set to 1. 20 warm-up $+$ 200 timed runs.
+\item \textbf{Browser WebAssembly SIMD / ONNX Runtime Web 1.17 from Node.js~25:} \texttt{bench.mjs} (supplementary). WASM execution provider with SIMD enabled and \texttt{numThreads} set to 1. 20 warm-up $+$ 200 timed runs. Equivalent in-browser numbers (Chrome 130, macOS 25.2) were verified to fall within $\pm 10\%$ in pilot runs.
 \end{itemize}
 
 Both benchmarks consume the identical \texttt{.onnx} artifact; no platform-specific graph rewrites are performed.

@@ -63,14 +63,14 @@ with $\alpha=0.5$ and $\beta=0.1$. The teacher is frozen during student training
 \subsection{Post-Training INT8 Quantization}
 \label{sec:methods-ptq}
 
-Post-training INT8 quantization (PTQ) is performed on the ONNX export of each student rather than on the PyTorch graph. This choice is forced by two practical findings during development. First, PyTorch eager-mode static PTQ requires CPU tensors for the calibration loop; the existing \texttt{floodlite/quantize.py} initially attempted CUDA calibration and failed. Second, even after fixing the device-placement bug, several \texttt{timm}-prefixed encoders --- specifically \texttt{tf\_efficientnet\_lite0} and \texttt{mobilevit\_xxs} --- use a \texttt{Conv2dSame} layer for which no quantized CPU kernel exists in PyTorch 2.7$+$. Quantization at the PyTorch graph level therefore cannot reach the full student set without modifying upstream \texttt{timm} source.
+Post-training INT8 quantization (PTQ) is performed on the ONNX export of each student rather than on the PyTorch graph. This choice is forced by two practical findings during development. First, PyTorch eager-mode static PTQ requires CPU tensors for the calibration loop; the existing \texttt{floodlite/quantize.py} initially attempted CUDA calibration and failed. Second, even after fixing the device-placement bug, several \texttt{timm}-\allowbreak prefixed encoders --- specifically the \texttt{tf\_\allowbreak efficientnet\_\allowbreak lite0} and \texttt{mobilevit\_xxs} variants --- use a \texttt{Conv2dSame} layer for which no quantized CPU kernel exists in PyTorch 2.7$+$. Quantization at the PyTorch graph level therefore cannot reach the full student set without modifying upstream \texttt{timm} source.
 
 We instead use the ONNX Runtime \texttt{quantize\_static} API~\cite{ortQuant} (\texttt{onnxruntime.quantization}, v1.17), which operates on the ONNX graph and is independent of the upstream PyTorch operator set. Our recipe is:
 
 \begin{enumerate}
 \item \textbf{Pre-processing.} The FP32 ONNX is passed through \texttt{quant\_pre\_process} to fuse Conv-BN, fold constants, and lift the graph into a form that \texttt{quantize\_static} can analyse.
 \item \textbf{Calibration.} We select 200 randomly-sampled FSSD training images, run the FP32 graph against them through a custom \texttt{CalibrationDataReader} (\texttt{\_TorchLoaderCalibReader} in \texttt{floodlite/quantize.py}), and record activation histograms.
-\item \textbf{Quantization scheme.} Static QDQ (Quantize--DeQuantize) format with \texttt{per\_channel=False} for activations and \texttt{per\_channel=True} for weights restricted to \texttt{op\_types\_to\_quantize=[``Conv'',``Gemm'',``MatMul'']}. The op-type restriction is critical for MobileViT-XXS: without it, the per-channel quantizer attempts to fit per-output-channel scales to the rank-1 weight tensors of LayerNorm and \texttt{Add} operators, which produces undefined behaviour and silently collapses the output.
+\item \textbf{Quantization scheme.} Static QDQ (Quantize--DeQuantize) format with per-tensor activations and per-channel weights, with the per-channel scheme restricted to \texttt{Conv}, \texttt{Gemm}, and \texttt{MatMul} operators only via the \texttt{op\_types\_to\_quantize} argument. The op-type restriction is critical for MobileViT-XXS: without it, the per-channel quantizer attempts to fit per-output-channel scales to the rank-1 weight tensors of LayerNorm and \texttt{Add} operators, which produces undefined behaviour and silently collapses the output.
 \item \textbf{Calibration method.} We use \emph{Percentile} (99.999\%) rather than MinMax. MinMax is sensitive to single-image outlier activations on flood images with extreme reflective surfaces (wet asphalt, sun-glare on water), and produces unstable cross-fold INT8 IoU in our initial sweeps. Percentile-99.999\% is the most robust calibration option we evaluated and is the recipe we report in Section~\ref{sec:results-quant}.
 \end{enumerate}
 
@@ -79,7 +79,7 @@ The resulting INT8 graph is consumed by ONNX Runtime's CPU execution provider; n
 \subsection{Deployment Pipeline}
 \label{sec:methods-deploy}
 
-Models are exported via PyTorch's TorchScript-based ONNX exporter \texttt{torch.onnx.export(\ldots,\,dynamo=False,\,opset\_version=13)} to a single \texttt{.onnx} file with embedded weights. We deliberately disable the PyTorch 2.8$+$ Dynamo exporter (\texttt{dynamo=True}) which produces separate \texttt{.data} sidecar files for weights --- this complicates artifact distribution and is not yet uniformly supported across edge runtimes.
+Models are exported via PyTorch's TorchScript-based ONNX exporter (\texttt{torch.onnx.export} with \texttt{dynamo=False} and \texttt{opset\_version=13}) to a single \texttt{.onnx} file with embedded weights. We deliberately disable the PyTorch 2.8$+$ Dynamo exporter (\texttt{dynamo=True}) which produces separate \texttt{.data} sidecar files for weights --- this complicates artifact distribution and is not yet uniformly supported across edge runtimes.
 
 We use ONNX as the single deployment hub. The same \texttt{.onnx} artifact serves both deployment targets in this paper:
 
