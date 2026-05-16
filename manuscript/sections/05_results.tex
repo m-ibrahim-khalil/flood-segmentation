@@ -92,9 +92,8 @@ The pipeline schematic appears at the top of Section~\ref{sec:methods} (Figure~\
 
 \begin{figure*}[ht]
 \centering
-% Placeholder until F3_qualitative.pdf is rendered by scripts/make_qualitative.py.
-\fbox{\parbox{0.85\linewidth}{\centering \emph{Figure placeholder.} F3\_qualitative.pdf is rendered by \texttt{scripts/make\_qualitative.py} once FSSD is on the rendering host; supplementary material.\\[4pt]}}
-\caption{\textbf{Qualitative panel} (supplementary). Two rows $\times$ five columns: input, GT, teacher FP32 prediction, EfficientNet-Lite0 INT8 prediction, error map (TP/FP/FN). The easy row is the highest-IoU fold-0 validation image under the deployable model; the hard row is the lowest-IoU image with $\geq 2\%$ flood-pixel coverage.}
+\includegraphics[width=0.92\linewidth]{figures/F3_qualitative.pdf}
+\caption{\textbf{Qualitative comparison on FSSD fold-0 validation.} Two rows $\times$ five columns: input, ground truth, teacher (UNet$+$EfficientNet-B0, FP32) prediction, EfficientNet-Lite0-UNet INT8 prediction, and error map (TP green, FP red, FN blue). \textbf{Easy row} (top): the highest-IoU validation image under the deployable INT8 student (FSS1604, IoU $=0.995$ for both teacher and student). \textbf{Hard row} (bottom): the lowest-IoU image with $\geq 2\%$ flood-pixel coverage (FSS904, teacher IoU $=0.546$; student IoU $=0.157$). The hard row shows the two persistent failure modes discussed in Section~\ref{sec:discussion-failures}: false-positive activations on bright reflective non-water surfaces (red regions), and false-negative under-segmentation along vegetation-occluded boundaries (blue regions).}
 \label{fig:f3-qualitative}
 \end{figure*}
 
