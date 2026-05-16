@@ -404,7 +404,44 @@ def main() -> None:
     runs_dir: Path = args.runs
     summary  = _load_json(runs_dir / "summary.json")
     stats    = _load_json(runs_dir / "stats.json")
-    quantized = _load_json(runs_dir / "quantized.json")
+    quantized_raw = _load_json(runs_dir / "quantized.json")
+
+    # Normalize quantized.json from nested per-fold {fold_N: {arch: {fp32_iou, int8_iou, ...}}}
+    # to the flat {arch_none: {int8_iou_mean, int8_iou_std, fp32_onnx_mb, int8_onnx_mb}}
+    # schema the T1/T4 builders expect.
+    quantized: dict | None = None
+    if quantized_raw is not None:
+        per_arch: dict[str, dict[str, list]] = {}
+        for fold_key, fold in quantized_raw.items():
+            if not fold_key.startswith("fold_"):
+                continue
+            for arch, entry in fold.items():
+                if "error" in entry:
+                    continue
+                bucket = per_arch.setdefault(arch, {"fp32_iou": [], "int8_iou": [],
+                                                    "fp32_mb": [], "int8_mb": []})
+                if "fp32_iou" in entry: bucket["fp32_iou"].append(entry["fp32_iou"])
+                if "int8_iou" in entry: bucket["int8_iou"].append(entry["int8_iou"])
+                if "fp32_size_mb" in entry: bucket["fp32_mb"].append(entry["fp32_size_mb"])
+                if "int8_size_mb" in entry: bucket["int8_mb"].append(entry["int8_size_mb"])
+        import statistics as _stat
+        quantized = {}
+        for arch, b in per_arch.items():
+            row = {}
+            if b["int8_iou"]:
+                row["int8_iou_mean"] = float(_stat.fmean(b["int8_iou"]))
+                row["int8_iou_std"]  = float(_stat.pstdev(b["int8_iou"])) if len(b["int8_iou"]) > 1 else 0.0
+            if b["fp32_iou"]:
+                row["fp32_iou_mean"] = float(_stat.fmean(b["fp32_iou"]))
+                row["fp32_iou_std"]  = float(_stat.pstdev(b["fp32_iou"])) if len(b["fp32_iou"]) > 1 else 0.0
+            if b["fp32_mb"]:
+                row["fp32_onnx_mb"] = float(_stat.fmean(b["fp32_mb"]))
+            if b["int8_mb"]:
+                row["int8_onnx_mb"] = float(_stat.fmean(b["int8_mb"]))
+            # Register under multiple key forms so both T1 (looks up by `key`) and
+            # T4 (looks up by `key` or `{key}_none`) find it.
+            quantized[arch] = row
+            quantized[f"{arch}_none"] = row
 
     sections_md: list[str] = []
     sections_txt: list[str] = []

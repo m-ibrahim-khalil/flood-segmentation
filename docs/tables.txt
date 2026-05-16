@@ -10,9 +10,9 @@ Model                 Params (M)  GFLOPs @256²  FP32 ONNX (MB)  INT8 ONNX (MB)
 --------------------  ----------  ------------  --------------  --------------
 Teacher (UNet+EffB0)  6.25        n/a           n/a             n/a           
 MobileNetV2 baseline  6.63        n/a           n/a             n/a           
-MobileNetV3-Small     3.59        n/a           n/a             n/a           
-EfficientNet-Lite0    5.61        n/a           n/a             n/a           
-MobileViT-XXS         3.09        n/a           n/a             n/a           
+MobileNetV3-Small     3.59        n/a           13.8            3.7           
+EfficientNet-Lite0    5.61        n/a           19.8            5.2           
+MobileViT-XXS         3.09        n/a           12.0            3.5           
 
 T2 — In-Distribution Segmentation
 ============================================================
@@ -48,7 +48,13 @@ _Best student = MobileViT-XXS (highest mean IoU = 0.9367 for 'none' config). Wil
 
 T4 — Quantization
 ============================================================
-(awaiting Phase C quantized.json output)
+Model               FP32 IoU (mean ± std)  INT8 IoU (mean ± std)  Δ IoU    FP32 ONNX (MB)  INT8 ONNX (MB)  Size reduction
+------------------  ---------------------  ---------------------  -------  --------------  --------------  --------------
+MobileNetV3-Small   0.9269 ± 0.0043        0.4762 ± 0.3399        -0.4507  13.8            3.7             3.69×         
+EfficientNet-Lite0  0.9277 ± 0.0047        0.8851 ± 0.0149        -0.0426  19.8            5.2             3.83×         
+MobileViT-XXS       0.9367 ± 0.0055        0.4752 ± 0.1936        -0.4616  12.0            3.5             3.42×         
+
+_INT8 PTQ calibrated on 200 train images, CPU inference._
 
 T5 — Per-Platform Latency
 ============================================================
