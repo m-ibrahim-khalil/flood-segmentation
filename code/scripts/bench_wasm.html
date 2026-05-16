@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>FloodLite WASM Benchmark</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 20px; max-width: 900px; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; overflow-x: auto; }
+    button { font-size: 14px; padding: 8px 16px; margin: 8px 0; }
+    .ok { color: #2ea043; }
+    .err { color: #cf222e; }
+    h1 { font-size: 20px; }
+  </style>
+</head>
+<body>
+<h1>FloodLite — ONNX Runtime Web (WASM) benchmark</h1>
+<p>Browser: <span id="ua"></span></p>
+<p>Each model runs 20 warm-up + 200 timed forward passes at 1×3×256×256.</p>
+<button id="run">Run benchmark</button>
+<pre id="out">Click "Run benchmark" to start.</pre>
+<pre id="json" style="background:#f8f8f8; color:#000; border:1px solid #ccc;">JSON output will appear here after the run completes — copy & paste into lat_wasm.json.</pre>
+
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.3/dist/ort.min.js"></script>
+<script>
+const out = document.getElementById('out');
+const json_el = document.getElementById('json');
+document.getElementById('ua').textContent = navigator.userAgent;
+
+function log(s, cls) {
+  const line = document.createElement('span');
+  if (cls) line.className = cls;
+  line.textContent = s + '\n';
+  out.appendChild(line);
+}
+
+async function bench(name, file) {
+  log(`Loading ${file} ...`);
+  let sess;
+  try {
+    sess = await ort.InferenceSession.create(file, { executionProviders: ['wasm'] });
+  } catch (e) {
+    log(`  FAIL: ${e.message}`, 'err');
+    return null;
+  }
+  const x = new ort.Tensor('float32', new Float32Array(3*256*256), [1,3,256,256]);
+  const feeds = { input: x };
+  // Warm-up
+  for (let i=0; i<20; i++) await sess.run(feeds);
+  // Timed
+  const ts = [];
+  for (let i=0; i<200; i++) {
+    const t0 = performance.now();
+    await sess.run(feeds);
+    ts.push(performance.now() - t0);
+  }
+  ts.sort((a,b)=>a-b);
+  const p50 = ts[Math.floor(ts.length*0.5)];
+  const p95 = ts[Math.floor(ts.length*0.95)];
+  const mean = ts.reduce((a,b)=>a+b,0) / ts.length;
+  const std = Math.sqrt(ts.reduce((a,b)=>a+(b-mean)**2,0) / ts.length);
+  const fps = 1000 / p50;
+  log(`  p50=${p50.toFixed(2)}ms  p95=${p95.toFixed(2)}ms  fps=${fps.toFixed(1)}`, 'ok');
+  return { p50_ms: p50, p95_ms: p95, mean_ms: mean, std_ms: std, fps };
+}
+
+document.getElementById('run').onclick = async () => {
+  out.textContent = '';
+  json_el.textContent = '';
+  log(`Starting benchmark @ ${new Date().toISOString()}`);
+  // File names match the renaming step in the Mac-side prep script:
+  //   {arch}_fp32.onnx, {arch}_int8.onnx (no fold suffix)
+  const models = [
+    ['mobilenetv3_small_fp32',  'mobilenetv3_small_fp32.onnx'],
+    ['mobilenetv3_small_int8',  'mobilenetv3_small_int8.onnx'],
+    ['efficientnet_lite0_fp32', 'efficientnet_lite0_fp32.onnx'],
+    ['efficientnet_lite0_int8', 'efficientnet_lite0_int8.onnx'],
+    ['mobilevit_xxs_fp32',      'mobilevit_xxs_fp32.onnx'],
+    ['mobilevit_xxs_int8',      'mobilevit_xxs_int8.onnx'],
+  ];
+  const results = { host: navigator.userAgent };
+  for (const [key, fname] of models) {
+    const r = await bench(key, fname);
+    if (r) results[key] = r;
+  }
+  log('\nDONE — paste JSON below into lat_wasm.json:', 'ok');
+  json_el.textContent = JSON.stringify(results, null, 2);
+};
+</script>
+</body>
+</html>
