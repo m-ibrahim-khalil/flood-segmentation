@@ -67,14 +67,14 @@ _INT8 PTQ calibrated on 200 train images, CPU inference._
 
 ## T5 — Per-Platform Latency
 
-| Model                   | M2 Pro — p50 (ms) | M2 Pro — p95 (ms) | M2 Pro — FPS |
-|-------------------------|-------------------|-------------------|--------------|
-| teacher fp32            | 274.0             | 280.7             | 3.6          |
-| mobilenetv3 small fp32  | 19.5              | 20.4              | 51.2         |
-| mobilenetv3 small int8  | 13.7              | 14.1              | 72.9         |
-| efficientnet lite0 fp32 | 34.2              | 52.7              | 29.3         |
-| efficientnet lite0 int8 | 17.3              | 20.1              | 57.7         |
-| mobilevit xxs fp32      | 28.3              | 32.8              | 35.4         |
-| mobilevit xxs int8      | 21.6              | 25.0              | 46.3         |
+| Model                   | M2 Pro — p50 (ms) | M2 Pro — p95 (ms) | M2 Pro — FPS | Browser (WASM) — p50 (ms) | Browser (WASM) — p95 (ms) | Browser (WASM) — FPS |
+|-------------------------|-------------------|-------------------|--------------|---------------------------|---------------------------|----------------------|
+| teacher fp32            | 274.0             | 280.7             | 3.6          | n/a                       | n/a                       | n/a                  |
+| mobilenetv3 small fp32  | 19.5              | 20.4              | 51.2         | 133.3                     | 134.8                     | 7.5                  |
+| mobilenetv3 small int8  | 13.7              | 14.1              | 72.9         | n/a                       | n/a                       | n/a                  |
+| efficientnet lite0 fp32 | 34.2              | 52.7              | 29.3         | 163.8                     | 210.5                     | 6.1                  |
+| efficientnet lite0 int8 | 17.3              | 20.1              | 57.7         | n/a                       | n/a                       | n/a                  |
+| mobilevit xxs fp32      | 28.3              | 32.8              | 35.4         | 149.4                     | 159.8                     | 6.7                  |
+| mobilevit xxs int8      | 21.6              | 25.0              | 46.3         | n/a                       | n/a                       | n/a                  |
 
 _Single-image inference, batch=1, 256×256 input. FPS = 1000/p50._

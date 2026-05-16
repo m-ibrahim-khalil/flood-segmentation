@@ -1,0 +1,34 @@
+{
+  "host": "node v25.3.0 onnxruntime-web 1.17.3 (WASM SIMD), single-threaded, on Apple M2 Pro",
+  "note": "INT8 entries failed at session-load time because onnxruntime-web 1.17.3 WASM EP does not implement QDQ-format INT8 Conv. This is a current ORT-Web limitation; INT8 WASM deployment is gated on future ORT-Web releases or a manual ConvInteger fallback. FP32 numbers reflect real WASM SIMD execution.",
+  "mobilenetv3_small_fp32": {
+    "p50_ms": 133.344916,
+    "p95_ms": 134.82145800000035,
+    "mean_ms": 133.29288978000008,
+    "std_ms": 1.088560032321739,
+    "fps": 7.49934853159306
+  },
+  "mobilenetv3_small_int8": {
+    "error": "35471864"
+  },
+  "efficientnet_lite0_fp32": {
+    "p50_ms": 163.83229199999914,
+    "p95_ms": 210.47095799999806,
+    "mean_ms": 171.10728996999987,
+    "std_ms": 32.33226994003519,
+    "fps": 6.103802783885885
+  },
+  "efficientnet_lite0_int8": {
+    "error": "52209528"
+  },
+  "mobilevit_xxs_fp32": {
+    "p50_ms": 149.40045799998916,
+    "p95_ms": 159.75675000000047,
+    "mean_ms": 150.9143997799991,
+    "std_ms": 5.5131765167876345,
+    "fps": 6.693419909061273
+  },
+  "mobilevit_xxs_int8": {
+    "error": "77456840"
+  }
+}
