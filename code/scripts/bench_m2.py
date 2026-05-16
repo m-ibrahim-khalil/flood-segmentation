@@ -88,20 +88,50 @@ def main() -> None:
 
     # ------------------------------------------------------------------
     # 2. ONNX Runtime CPU — FP32 and INT8 models
+    #
+    # File naming produced by quantize_all.py is per-fold:
+    #   {sname}_fold{N}_fp32.onnx
+    #   {sname}_fold{N}_int8.onnx
+    # We resolve both that pattern and the flat plan-spec pattern
+    #   {sname}_fp32.onnx
+    # so the script tolerates either layout.
     # ------------------------------------------------------------------
-    onnx_names = (
-        ["teacher", "baseline_mobilenetv2"]
-        + [f"{s}_fp32" for s in STUDENT_BACKBONES]
-        + [f"{s}_int8" for s in STUDENT_BACKBONES]
-    )
-    for name in onnx_names:
-        op = exports_dir / f"{name}.onnx"
-        if not op.exists():
-            print(f"INFO: {op} not found, skipping.")
+    def _resolve(*candidates: Path) -> Path | None:
+        for c in candidates:
+            if c.exists():
+                return c
+        return None
+
+    onnx_targets: list[tuple[str, Path | None]] = []
+    onnx_targets.append((
+        "teacher",
+        _resolve(exports_dir / "teacher.onnx",
+                 exports_dir / f"teacher_fold{args.fold}.onnx"),
+    ))
+    onnx_targets.append((
+        "baseline_mobilenetv2",
+        _resolve(exports_dir / "baseline_mobilenetv2.onnx",
+                 exports_dir / f"baseline_mobilenetv2_fold{args.fold}.onnx"),
+    ))
+    for s in STUDENT_BACKBONES:
+        onnx_targets.append((
+            f"{s}_fp32",
+            _resolve(exports_dir / f"{s}_fp32.onnx",
+                     exports_dir / f"{s}_fold{args.fold}_fp32.onnx"),
+        ))
+        onnx_targets.append((
+            f"{s}_int8",
+            _resolve(exports_dir / f"{s}_int8.onnx",
+                     exports_dir / f"{s}_fold{args.fold}_int8.onnx"),
+        ))
+
+    for name, op in onnx_targets:
+        if op is None:
+            print(f"INFO: ONNX for '{name}' not found in {exports_dir}, skipping.")
             continue
         key = f"{name}_ort_cpu"
         out[key] = benchmark_onnxruntime(op)
-        print(f"{key}: {out[key]}")
+        print(f"{key} ({op.name}): {out[key]}")
 
     # ------------------------------------------------------------------
     # 3. Write results
