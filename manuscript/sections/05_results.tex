@@ -1,0 +1,107 @@
+% =====================================================================
+%  Section 5 -- Results
+% =====================================================================
+
+\section{Results}
+\label{sec:results}
+
+This section is organised around Tables~\ref{tab:t1-footprints}--\ref{tab:t5-latency} and Figures~\ref{fig:f2-pareto}--\ref{fig:f4-throughput}. The pipeline schematic (Figure~\ref{fig:f1-pipeline}) and qualitative panel (Figure~\ref{fig:f3-qualitative}) appear in the supplementary material.
+
+\subsection{Teacher Performance and Karc{\i} \emph{et al.}~(2026) Comparison}
+\label{sec:results-teacher}
+
+Our UNet $+$ EfficientNet-B0 teacher achieves \textbf{IoU $= \teacherIoU \pm \teacherStd$} on FSSD across the three folds (F1 $= 0.9611 \pm 0.0044$, accuracy $= 0.9729 \pm 0.0025$). The reference UNet $+$ EfficientNet-B7 number reported by Karc{\i} \emph{et al.}~\cite{karci2026deep} is IoU $= 0.927$, achieved with approximately $10\times$ the parameters ($\sim 63$\,M vs.~our 6.25\,M). The 0.0013 IoU gap between our B0 teacher and the published B7 reference is within the cross-fold standard deviation of both studies and indicates that the FSSD benchmark saturates well before the B7 capacity is required; B0 is sufficient as the teacher.
+
+\subsection{Students Match or Exceed the Teacher Without Distillation (Negative-KD Finding)}
+\label{sec:results-kd}
+
+The full segmentation results across all 14 configurations $\times$ 3 folds appear in Table~\ref{tab:t2-segmentation}. Three observations:
+
+\input{tables/T2_segmentation}
+
+\begin{enumerate}
+\item \textbf{The best student exceeds the teacher.} MobileViT-XXS in the no-KD configuration attains IoU $= \bestStudentIoU \pm \bestStudentStd$, \emph{0.011 IoU points above the teacher} (\teacherIoU $\pm$ \teacherStd). The student is also $2.0\times$ smaller in parameters (3.09\,M vs.~6.25\,M). This is the headline result against which the original KD-recipe framing of this paper has to be evaluated.
+\item \textbf{EfficientNet-Lite0 (no-KD) matches the teacher within standard deviation} ($0.9277 \pm 0.0047$ vs.~$\teacherIoU \pm \teacherStd$). MobileNetV3-Small (no-KD) likewise matches it ($0.9269 \pm 0.0043$).
+\item \textbf{The MobileNetV2 baseline also matches the teacher} ($0.9257 \pm 0.0032$). The teacher's parameter count is therefore not the source of any advantage; it is an over-parameterised lightweight UNet, not a ``heavy'' model in the regime where KD typically helps.
+\end{enumerate}
+
+We interpret these observations as direct evidence that FSSD, at 663 RGB images and IoU $\approx 0.93$, is saturated for the ImageNet-pretrained UNet family. The variance across $(\text{model} \times \text{KD})$ cells of Table~\ref{tab:t2-segmentation} is dominated by fold-level seed noise rather than by genuine architectural separations. KD has no headroom to transfer.
+
+Table~\ref{tab:t3-kd-ablation} isolates the KD ablation on the best student. None of the three KD configurations improves on the no-KD baseline:
+
+\input{tables/T3_kd_ablation}
+
+The Wilcoxon test on no-KD vs.~comb-KD yields $p = 0.250$ --- the minimum two-sided p-value reportable at $n=3$ --- which means the test is consistent with both ``comb-KD is no worse'' and ``comb-KD is meaningfully worse'' under low power, but in no case does it support ``comb-KD is better''. The remaining contrasts (resp, feat) cannot be tested due to insufficient direction agreement across only three folds. The same qualitative pattern holds on MobileNetV3-Small and EfficientNet-Lite0 (see full Table~\ref{tab:t2-segmentation}). Across \emph{all three architectures $\times$ three KD configurations $\times$ three folds} (27 fold-level data points), the combined KD configuration produces a higher mean IoU than the no-KD baseline in zero out of three architectures.
+
+\subsection{INT8 Quantization is Architecture-Dependent}
+\label{sec:results-quant}
+
+Table~\ref{tab:t4-quant} summarises post-training INT8 quantization for the three deployable students:
+
+\input{tables/T4_quantization}
+
+The cross-architecture spread is the central finding of this section. Under an identical Percentile-99.999\% static QDQ recipe, EfficientNet-Lite0 retains 95\% of its FP32 IoU with a tight $\pm 0.015$ cross-fold standard deviation, whereas MobileNetV3-Small and MobileViT-XXS both lose $\sim 0.45$ IoU points with cross-fold standard deviations of 0.19--0.34 --- an order of magnitude larger than EfficientNet-Lite0's. We interpret these failures architecturally:
+
+\begin{itemize}
+\item \textbf{MobileNetV3-Small} uses the HardSwish activation $x \cdot \mathrm{ReLU6}(x+3)/6$, which has an unbounded positive tail and produces calibration statistics dominated by single-image outliers. Per-tensor INT8 calibration cannot fit a single scale that simultaneously preserves the activations of common flood-pixel patches and of bright reflective outliers (wet asphalt, water-surface sun-glare). Percentile-99.999\% mitigates but does not eliminate this; we conjecture that MobileNetV3-S requires either (a)~QAT to learn quantizer-friendly activations or (b)~a HardSwish\,$\rightarrow$\,ReLU6 surgical replacement before quantization.
+\item \textbf{MobileViT-XXS} combines a CNN trunk with self-attention blocks containing LayerNorm. The LayerNorm $\gamma / \beta$ tensors are rank-1 across channels, which means per-channel weight quantization (the standard recipe for Conv layers) is ill-defined; restricting per-channel quantization to \texttt{Conv/Gemm/MatMul} (Section~\ref{sec:methods-ptq}) partially fixes this but leaves the attention \texttt{MatMul} itself quantized per-tensor, where the high dynamic range of attention scores again exceeds what static calibration can fit.
+\item \textbf{EfficientNet-Lite0} uses ReLU6 throughout. ReLU6 is bounded by construction at 6.0, so the per-tensor activation calibration finds a stable scale that matches the actual activation range in every fold. The 0.043 IoU drop is consistent with the conventional-wisdom ``$\sim 1$ IoU point'' PTQ tax in the classification literature.
+\end{itemize}
+
+The practical implication: \emph{bounded-activation backbones (ReLU6) are the safe default for INT8 PTQ on flood segmentation; HardSwish and attention-based backbones currently require QAT or remain FP32 in deployment.} We do not attempt QAT in this paper --- it is out of scope and an order-of-magnitude larger training investment --- and instead recommend EfficientNet-Lite0 as the deployable configuration on the basis of its joint accuracy $+$ size $+$ stability behaviour.
+
+\subsection{Per-Platform Inference Latency}
+\label{sec:results-latency}
+
+Table~\ref{tab:t5-latency} reports inference latency on the two deployment platforms.
+
+\input{tables/T5_latency}
+
+Three remarks. First, \emph{all three students offer a $7$--$19\times$ speedup over the teacher on the M2~Pro target}, primarily reflecting the parameter and FLOP reductions but also benefiting from ORT's CPU-graph optimisations on smaller models. Second, \emph{INT8 yields a further $1.3$--$1.6\times$ speedup on top of the FP32 student baseline}, consistent with INT8 SIMD-CPU expectations. The combined teacher-FP32 $\rightarrow$ EfficientNet-Lite0-INT8 speedup is $15.8\times$ at a 95\% IoU recovery. Third, \emph{the WASM column is roughly $5\times$ slower than the M2-CPU column for the same FP32 model}, which is the expected single-threaded-WebAssembly-vs-native-CPU gap and represents an effective lower bound on browser-deployment performance. INT8 WASM rows are unsupported by ONNX Runtime Web 1.17 at time of writing and are marked n/a.
+
+\subsection{Pareto Analysis}
+\label{sec:results-pareto}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.95\linewidth]{figures/F2_pareto.pdf}
+\caption{\textbf{Pareto frontier on four deployment-relevant axes.} IoU vs.~$\{$Params, FP32 ONNX size, M2~Pro p50, WASM p50$\}$. The \textbf{EfficientNet-Lite0 INT8} configuration is on the Pareto frontier on the parameter, M2-latency, and WASM-latency axes simultaneously; \textbf{MobileViT-XXS no-KD FP32} is Pareto-optimal on the accuracy axis but not deployable as INT8 under the current static QDQ recipe.}
+\label{fig:f2-pareto}
+\end{figure}
+
+The Pareto front therefore identifies two distinct deployment operating points:
+
+\begin{itemize}
+\item \textbf{Maximum-accuracy operating point:} MobileViT-XXS no-KD FP32 (IoU 0.937, 28\,ms M2, 149\,ms WASM, 12\,MB).
+\item \textbf{Maximum-throughput-with-acceptable-accuracy operating point:} EfficientNet-Lite0 INT8 (IoU 0.885, 17\,ms M2, no WASM, 5.2\,MB).
+\end{itemize}
+
+We recommend the latter for unattended flood-mapping pipelines ($1.6\times$ throughput, $2.3\times$ smaller binary) and the former for human-in-the-loop applications where the 5.2-point IoU drop matters.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.95\linewidth]{figures/F4_throughput.png}
+\caption{\textbf{Per-platform throughput, FP32 vs.~INT8.} Frames-per-second on M2~Pro (left) and browser WASM SIMD (right); INT8 entries are unsupported on ORT-Web 1.17.}
+\label{fig:f4-throughput}
+\end{figure}
+
+\subsection{Pipeline Diagram and Qualitative Examples}
+\label{sec:results-pipeline}
+
+\begin{figure}[ht]
+\centering
+% Placeholder until F1_pipeline.pdf is finalised (PowerPoint / draw.io export).
+\fbox{\parbox{0.85\linewidth}{\centering \emph{Figure placeholder.} F1\_pipeline.pdf is generated manually (PowerPoint or draw.io) and dropped into \texttt{manuscript/figures/}. Layout: $\text{train teacher} \rightarrow \text{distill students (ablation)} \rightarrow \text{quantize INT8} \rightarrow \text{benchmark on M2 CPU + WASM}$.\\[4pt]}}
+\caption{\textbf{FloodLite pipeline.} Train teacher (UNet+EffB0) $\rightarrow$ train students (3 backbones $\times$ 4 KD configs) $\rightarrow$ INT8-quantize the no-KD students via ONNX static QDQ $\rightarrow$ benchmark FP32 and INT8 on M2~Pro CPU and browser WASM.}
+\label{fig:f1-pipeline}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+% Placeholder until F3_qualitative.pdf is rendered by scripts/make_qualitative.py.
+\fbox{\parbox{0.85\linewidth}{\centering \emph{Figure placeholder.} F3\_qualitative.pdf is rendered by \texttt{scripts/make\_qualitative.py} once FSSD is on the rendering host; supplementary material.\\[4pt]}}
+\caption{\textbf{Qualitative panel} (supplementary). Two rows $\times$ five columns: input, GT, teacher FP32 prediction, EfficientNet-Lite0 INT8 prediction, error map (TP/FP/FN). The easy row is the highest-IoU fold-0 validation image under the deployable model; the hard row is the lowest-IoU image with $\geq 2\%$ flood-pixel coverage.}
+\label{fig:f3-qualitative}
+\end{figure}
+
+Two persistent failure modes shared by teacher and student are visible in the hard row of Figure~\ref{fig:f3-qualitative}: wet asphalt confused with water, and under-segmentation of vegetation-occluded flood edges. We return to these in Section~\ref{sec:discussion-failures}.

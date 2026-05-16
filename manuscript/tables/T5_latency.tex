@@ -1,0 +1,29 @@
+% =====================================================================
+%  Table T5 -- Per-Platform Latency
+%  Source of truth: code/runs/3fold/{lat_m2,lat_wasm}.json
+% =====================================================================
+\begin{table*}[ht]
+\centering
+\caption{\textbf{Per-platform inference latency.} Single-image batches, $256{\times}256$ input. M2~Pro and browser WASM both consume the same \texttt{.onnx} artifact under different execution providers. INT8 WASM rows are n/a because ONNX Runtime Web 1.17 does not implement QDQ-format INT8 Conv (upstream limitation; scheduled for ORT-Web 1.18$+$).}
+\label{tab:t5-latency}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lcccccc}
+\toprule
+\multirow{2}{*}{\textbf{Model}}
+  & \multicolumn{3}{c}{\textbf{Apple M2~Pro (ORT-CPU)}}
+  & \multicolumn{3}{c}{\textbf{Browser WASM SIMD (ORT-Web)}} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7}
+  & p50 (ms) & p95 (ms) & FPS  & p50 (ms) & p95 (ms) & FPS  \\
+\midrule
+Teacher (UNet$+$EffB0) FP32        & 274.0 & 280.7 & 3.6   & \multicolumn{3}{c}{n/a (out-of-scope for browser deploy)} \\
+\midrule
+MobileNetV3-Small FP32             &  19.5 &  20.4 & 51.2  & 133.3 & 134.8 & 7.5 \\
+MobileNetV3-Small INT8             &  13.7 &  14.1 & 72.9  & \multicolumn{3}{c}{n/a (ORT-Web 1.17 limitation)} \\
+EfficientNet-Lite0 FP32            &  34.2 &  52.7 & 29.3  & 163.8 & 210.5 & 6.1 \\
+\textbf{EfficientNet-Lite0 INT8}   &  \textbf{17.3} & \textbf{20.1} & \textbf{57.7} & \multicolumn{3}{c}{n/a (ORT-Web 1.17 limitation)} \\
+MobileViT-XXS FP32                 &  28.3 &  32.8 & 35.4  & 149.4 & 159.8 & 6.7 \\
+MobileViT-XXS INT8                 &  21.6 &  25.0 & 46.3  & \multicolumn{3}{c}{n/a (ORT-Web 1.17 limitation)} \\
+\bottomrule
+\end{tabular}
+\end{table*}

@@ -1,0 +1,20 @@
+% =====================================================================
+%  Table T4 -- Quantization
+%  Source of truth: code/runs/3fold/quantized.json + ONNX file sizes.
+% =====================================================================
+\begin{table*}[ht]
+\centering
+\caption{\textbf{Post-training INT8 quantization} (static QDQ, Percentile-99.999\% calibration, 200 train images). EfficientNet-Lite0 (highlighted) is the recommended deployable configuration; the other two students suffer architecture-driven PTQ collapse (Section~\ref{sec:results-quant}).}
+\label{tab:t4-quant}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lccccccc}
+\toprule
+\textbf{Model} & \textbf{FP32 IoU} & \textbf{INT8 IoU} & \textbf{$\Delta$ IoU} & \textbf{FP32 ONNX (MB)} & \textbf{INT8 ONNX (MB)} & \textbf{Size reduction} \\
+\midrule
+MobileNetV3-Small   & 0.9269 $\pm$ 0.0043 & 0.4762 $\pm$ 0.3399 & $-0.4507$ & 13.8 & 3.7 & $3.69\times$ \\
+\textbf{EfficientNet-Lite0} & \textbf{0.9277 $\pm$ 0.0047} & \textbf{0.8851 $\pm$ 0.0149} & $\boldsymbol{-0.0426}$ & \textbf{19.8} & \textbf{5.2} & $\boldsymbol{3.83\times}$ \\
+MobileViT-XXS       & 0.9367 $\pm$ 0.0055 & 0.4752 $\pm$ 0.1936 & $-0.4616$ & 12.0 & 3.5 & $3.42\times$ \\
+\bottomrule
+\end{tabular}
+\end{table*}

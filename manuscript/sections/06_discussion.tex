@@ -1,0 +1,51 @@
+% =====================================================================
+%  Section 6 -- Discussion
+% =====================================================================
+
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{The Negative-KD Finding and What It Means for the Field}
+\label{sec:discussion-negative-kd}
+
+The central empirical claim of this paper is that knowledge distillation does not help on FSSD-class flood segmentation when the student is an ImageNet-pretrained lightweight UNet. We frame this as a \emph{negative result} rather than a \emph{null result} because the comparison is not ``we did not find a positive effect'' but rather ``the best student (MobileViT-XXS, no-KD) \emph{exceeds} the teacher (UNet$+$EfficientNet-B0)''. Distillation on this benchmark is at best redundant and at worst counter-productive: combined KD on MobileViT-XXS produced $-0.005$ IoU vs.~the same architecture trained without it.
+
+We interpret this mechanistically. The classical motivation for KD --- Hinton's \emph{dark knowledge} argument~\cite{hinton2015distilling} and subsequent feature-map alignment work~\cite{romero2015fitnets,liu2019structured,wang2020intra,he2021channel} --- assumes that the student has insufficient capacity or pretraining to recover the teacher's behaviour from labelled data alone, so the teacher's soft probabilities and intermediate features provide a richer supervision signal than the binary mask. On FSSD, that assumption is violated in two directions: (i)~the benchmark has only 663 images and saturates at IoU $\approx 0.93$ --- the labelled signal is already nearly sufficient --- and (ii)~the student's ImageNet pretraining already supplies the visual priors (edge detectors, texture filters, semantic-region features) that a teacher trained on the same FSSD would have been transferring. The teacher's ``dark knowledge'' is therefore largely redundant with the student's pretraining, and the response-based KL term reduces to a noise-injection regulariser. The feature-MSE term performs slightly better --- it provides at least \emph{some} signal beyond the labels --- but the gain is well within fold variance and is not statistically significant at our reportable resolution.
+
+This finding has two implications for the flood-segmentation literature:
+
+\begin{enumerate}
+\item \textbf{Benchmarks matter.} A KD recipe that wins on Cityscapes (19 classes, 5000 images, IoU $\approx 0.80$--$0.85$) does not transfer to FSSD (2 classes, 663 images, IoU $\approx 0.93$). Future KD work in this space should report headroom (teacher--best-pretrained-student gap) \emph{before} claiming distillation effects.
+\item \textbf{Modern ImageNet pretraining is doing the work.} The 2026 wave of \texttt{timm}-pretrained lightweight backbones brings the no-KD baseline so high that compression strategies \emph{other than} distillation --- quantization, pruning, architecture choice --- dominate the deployment-relevant trade-offs. We recommend that authors investing in flood-segmentation compression budget their effort accordingly.
+\end{enumerate}
+
+\subsection{Per-Platform Deployment Recommendations}
+\label{sec:discussion-deployment}
+
+Based on the joint segmentation $\times$ latency $\times$ stability evidence (Sections~\ref{sec:results-kd}--\ref{sec:results-latency}), we make the following deployment recommendations:
+
+\begin{itemize}
+\item \textbf{Field-laptop / tablet inference (Apple Silicon class):} EfficientNet-Lite0 UNet INT8. 17\,ms p50 (\deployableMTwoFPS~FPS) at IoU 0.885, $3.83\times$ size reduction. Stable across folds ($\pm 0.015$). This is the configuration we ship in our public release.
+\item \textbf{Browser citizen-science / web-portal inference:} MobileNetV3-Small UNet FP32 (133\,ms p50; 7.5\,FPS), or MobileViT-XXS UNet FP32 (149\,ms p50; 6.7\,FPS) for slightly higher accuracy. INT8 is not yet supported in ONNX Runtime Web 1.17 and is gated on ORT-Web 1.18$+$ shipping a QDQ INT8 Conv kernel.
+\item \textbf{Maximum-accuracy off-line inference:} MobileViT-XXS UNet FP32 (28\,ms p50 on M2~Pro CPU; IoU 0.937). Recommended for human-in-the-loop annotation pipelines.
+\end{itemize}
+
+We do not recommend the teacher (UNet$+$EffB0) for any of these deployment scenarios in this paper: at 274\,ms p50 (\teacherMTwoFPS~FPS) on M2~Pro CPU, it is uniformly dominated by the smaller students on both accuracy and latency.
+
+\subsection{Architecture-Dependent PTQ Stability is a Practitioner Trap}
+\label{sec:discussion-ptq-trap}
+
+The 0.45-IoU PTQ collapse on MobileNetV3-Small and MobileViT-XXS would not be predicted from the classification-quantization literature, which typically reports $\sim 1$ IoU point PTQ tax on ResNet/MobileNet/EfficientNet families on ImageNet~\cite{krishnamoorthi2018quantizing,jacob2018quantization}. The flood-segmentation regime differs in two respects: (i)~the output is a per-pixel binary mask, so any quantization error that biases the post-sigmoid threshold materially shifts the segmentation; and (ii)~flood images contain a wide dynamic range of bright reflective surfaces that drive calibration statistics in HardSwish-based backbones. We have observed that the same Percentile-99.999\% recipe that fully recovers EfficientNet-Lite0 leaves MobileNetV3-Small with one of three failure modes per fold: (a)~the entire output collapses to $\approx 0.5$ IoU (random-class prediction), (b)~the output is biased toward the background class (recall $\approx 0.1$), or (c)~it works ($\approx 0.92$ IoU). The cross-fold variance reflects this mode-mixture rather than a smooth degradation.
+
+The practical guidance: when assembling a flood-segmentation deployment artifact under a static-QDQ-INT8 budget, prefer backbones with bounded activation ranges (ReLU6 is the safest, ReLU is fine, HardSwish is risky, GELU and softmax-attention are \emph{not} PTQ-friendly without QAT). Without this guidance, a practitioner running the standard ONNX Runtime quantization tutorial on MobileNetV3-Small would conclude --- incorrectly --- that the model ``doesn't quantize'' rather than that the recipe is mismatched to the activation family.
+
+\subsection{Failure Modes (Qualitative)}
+\label{sec:discussion-failures}
+
+Figure~\ref{fig:f3-qualitative} (supplementary) shows that both teacher and EfficientNet-Lite0-INT8 student share two persistent failure modes:
+\begin{itemize}
+\item \textbf{Bright-reflective-surface confusion:} wet asphalt, glare-on-roof, and large reflective puddles are misclassified as flood. This is a labelling-modality issue, not a model-capacity issue --- RGB alone cannot disambiguate water from wet non-water surfaces.
+\item \textbf{Vegetation-occluded edges:} when flooded water is partially overhung by trees or tall grass, both models under-segment the flood boundary. The 5-pixel margin at the boundary contributes disproportionately to the residual IoU gap.
+\end{itemize}
+
+Both failure modes argue for SAR or multispectral fusion rather than for a different RGB segmentation recipe. We discuss this in Section~\ref{sec:limitations}.

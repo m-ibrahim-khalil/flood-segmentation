@@ -1,0 +1,22 @@
+% =====================================================================
+%  Section 7 -- Limitations
+% =====================================================================
+
+\section{Limitations}
+\label{sec:limitations}
+
+We acknowledge the following limitations.
+
+\paragraph{Single-dataset training.} All experiments use FSSD (663 RGB images). We initially planned an out-of-distribution evaluation on Sen1Floods11 RGB chips and prepared the data-loading pipeline (\texttt{floodlite/data.py:make\_sen1floods11\_loader}), but the cross-domain evaluation was deprioritised after the negative-KD finding reduced the per-experiment value. The cross-region generalisation of the configurations recommended in Section~\ref{sec:discussion-deployment} is therefore unverified, and we flag this as the highest-priority follow-up.
+
+\paragraph{RGB-only modality.} Operational disaster-response platforms increasingly fuse SAR (cloud-penetrating, all-weather) with optical imagery; our work is restricted to the RGB regime FSSD was constructed for. The two persistent failure modes in Section~\ref{sec:discussion-failures} (wet-asphalt confusion, vegetation occlusion) are intrinsic to the RGB modality and cannot be solved by a better RGB model.
+
+\paragraph{Three folds and low statistical power.} The 3-fold protocol gives a minimum reportable two-sided Wilcoxon p of 0.25, which is insufficient to claim statistical significance for the cross-architecture and cross-KD-configuration contrasts at conventional thresholds. We report exact p-values and rely on effect-size magnitude (\eg the $-0.45$ IoU drop on MobileNetV3-S INT8 is unambiguous) and on within-architecture consistency across three folds (the negative-KD finding holds in 3/3 architectures $\times$ 3/3 folds) rather than on hypothesis-test significance.
+
+\paragraph{Two deployment platforms (M2 Pro + browser WASM).} We do not measure Raspberry~Pi~4, AWS Graviton (ARM CPU), Android (Termux $+$ TFLite), or any GPU edge target (Jetson Nano / Orin). Adding these is largely an artifact-conversion exercise --- the ONNX hub artifact remains the same --- but each adds a non-trivial setup and tuning cost we did not budget for. Pi~4 and Graviton numbers are the most directly comparable extensions and are scheduled for a \texttt{v1.1} supplementary release.
+
+\paragraph{Post-training quantization only.} We do not evaluate quantization-aware training (QAT). The 0.45-IoU PTQ collapse on MobileNetV3-Small and MobileViT-XXS is a candidate target for QAT --- both architectures are reportedly QAT-recoverable in the classification literature --- but QAT is an order-of-magnitude larger training investment than the experiments reported here and is left to future work.
+
+\paragraph{No energy / power measurements.} We do not report Joules-per-inference. Energy is the metric most directly relevant to battery-operated deployments (drones, field tablets) and we acknowledge its absence; the equipment required (USB-meter, INA219 / current-clamp logger) was not available during this study.
+
+\paragraph{Saturated benchmark.} FSSD saturates at IoU $\approx 0.93$ for the entire UNet $+$ ImageNet-pretrained backbone family. The negative-KD finding is therefore strictly a claim about saturated-benchmark behaviour. We do \emph{not} claim that KD never helps on flood segmentation in general --- only that, on this specific benchmark, it does not. A non-saturated benchmark with limited labels, mixed imaging modalities, or larger viewpoint diversity might recover the KD signal.

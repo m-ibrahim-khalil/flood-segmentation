@@ -1,0 +1,42 @@
+% =====================================================================
+%  Cover letter -- standalone LaTeX, paste into Editorial Manager.
+% =====================================================================
+\documentclass[11pt]{letter}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage[hidelinks]{hyperref}
+\usepackage{parskip}
+
+\signature{Md Ibrahim Khalil\\Sensa AS, Norway\\ibrahim@sensa.no\\On behalf of all authors}
+\address{Md Ibrahim Khalil\\Sensa AS\\Oslo, Norway\\ibrahim@sensa.no}
+
+\begin{document}
+\begin{letter}{The Editor\\\emph{International Journal of Disaster Risk Reduction}\\Elsevier}
+
+\opening{Dear Editor,}
+
+We are pleased to submit our manuscript, \emph{FloodLite: A Multi-Platform Edge-Deployment Benchmark for Lightweight Flood Segmentation}, for consideration as a Research Article in the \emph{International Journal of Disaster Risk Reduction}.
+
+Operational flood-extent mapping is bottlenecked not by segmentation accuracy on academic benchmarks --- that problem is essentially solved at IoU $\approx 0.93$ on the public Flood Semantic Segmentation Dataset (FSSD) by current encoder--decoder architectures --- but by the gap between published models and the constrained hardware that humanitarian responders actually deploy. Across the recent flood-segmentation literature, every paper reports IoU on a benchmark; \textbf{none reports per-platform inference latency, post-quantization accuracy, or model size}. Our manuscript closes that gap with the first systematic edge-deployment benchmark for flood segmentation, evaluated across two execution providers (Apple Silicon CPU and browser WebAssembly), three lightweight UNet students, and FP32 $+$ INT8 precisions.
+
+Two empirical findings make this work distinctive:
+
+\textbf{1.~A negative result on knowledge distillation.} Across three architectures $\times$ four distillation configurations $\times$ three folds, no configuration of response-, feature-, or combined-KD improves over the no-KD baseline; the best student (MobileViT-XXS-UNet, no-KD, FP32) \emph{exceeds} the UNet$+$EfficientNet-B0 teacher by 0.011 IoU points. We trace this to the saturation of FSSD (663 images, IoU $\approx 0.93$) combined with strong ImageNet pretraining, which leaves no headroom for the teacher's soft targets to transfer. We report this honestly rather than search for a configuration that would have justified a more conventional positive-result framing, because we believe the field is better served by an explicit benchmark-saturation caveat than by yet another marginal-gain KD recipe.
+
+\textbf{2.~Architecture-dependent post-training quantization stability.} Under an identical ONNX static QDQ INT8 recipe, EfficientNet-Lite0 quantizes cleanly ($\Delta\,\mathrm{IoU} = -0.043 \pm 0.016$) while MobileNetV3-Small and MobileViT-XXS suffer 0.45-IoU collapses with high cross-fold variance. We trace the failures to the HardSwish activation family and to LayerNorm-plus-attention blocks, and we make a concrete recommendation: ReLU6-bounded backbones (such as EfficientNet-Lite0) are the safe default for INT8 PTQ on flood-segmentation pixels, and HardSwish- or attention-based backbones require quantization-aware training. To our knowledge this is the first systematic characterisation of this failure mode in the flood-segmentation literature, and it directly informs deployment-architecture choice for practitioners.
+
+Our recommended deployable configuration --- EfficientNet-Lite0-UNet INT8 served by ONNX Runtime CPU --- runs at \textbf{58~FPS on a 2023 laptop CPU} and \textbf{6~FPS in a single-threaded WebAssembly browser sandbox} at \textbf{$3.83\times$ size reduction} and \textbf{95\% IoU recovery vs.~the teacher}. The same \texttt{.onnx} artifact serves both deployment targets, which we offer as a practical pattern for heterogeneous flood-response edge hardware.
+
+The work fits IJDRR's scope because the contribution is not a new neural-network design but a \emph{deployment-readiness benchmark for disaster-response practice}: the metrics we report (per-platform latency, INT8 size, INT8 IoU stability) are the metrics a humanitarian-data-science team needs to make a deployment decision, and they have been systematically absent from the prior flood-segmentation literature. We hope this orientation is useful to IJDRR's interdisciplinary readership of disaster-management practitioners and applied researchers.
+
+\textbf{Reproducibility and openness.} All code, ONNX exports, per-fold checkpoints, and benchmarking harnesses are released under MIT licence at \url{https://github.com/[your-username]/Flood_segmentation_model}. A Zenodo-archived snapshot (DOI to be minted at acceptance) will be linked in the camera-ready. The FSSD dataset is publicly available on Kaggle.
+
+\textbf{Conflicts of interest.} None to declare. \textbf{Funding.} The work received no external funding. We confirm that the manuscript has not been published previously, is not under consideration elsewhere, and has been read and approved by all listed authors.
+
+We would be grateful for your consideration of this submission and welcome any feedback from the editorial team and reviewers.
+
+\closing{Sincerely,}
+
+\end{letter}
+\end{document}

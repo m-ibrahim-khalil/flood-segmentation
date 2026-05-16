@@ -1,0 +1,38 @@
+% =====================================================================
+%  Section 4 -- Experimental Setup
+% =====================================================================
+
+\section{Experimental Setup}
+\label{sec:experimental-setup}
+
+\subsection{Implementation}
+\label{sec:setup-impl}
+
+Training is implemented in PyTorch 2.8 with \texttt{segmentation-models-pytorch} 0.4~\cite{iakubovskii2019smp} for UNet decoder construction and \texttt{timm} 1.0~\cite{wightman2019timm} for backbone implementations. Mixed-precision (AMP fp16) training runs on a Kaggle Tesla T4 GPU (16\,GB) with batch size 8 (teacher) or 16 (students). Optimisation uses AdamW with learning rate $3\!\times\!10^{-4}$, weight decay $10^{-4}$, and a cosine schedule. Training runs for 35 epochs (teacher and students alike); empirically, validation IoU plateaus by epoch $\sim 25$. Data augmentation is provided by Albumentations~\cite{buslaev2020albumentations}: random horizontal flip, random rotation $\pm 15^{\circ}$, random brightness/contrast jitter ($\pm 0.2$), and ImageNet normalisation. The random seed is fixed at 42.
+
+ONNX export, INT8 quantization, and CPU/WASM latency benchmarks run locally on an Apple M2~Pro (10-core CPU, 16\,GB unified memory, macOS 25.2). The Kaggle T4 is used for training only.
+
+\subsection{Cross-Validation Protocol}
+\label{sec:setup-cv}
+
+We use 3-fold cross-validation with \texttt{sklearn.model\_selection.KFold(n\_splits=5,\,shuffle=True,\,random\_state=42)}, evaluating only folds 0--2 of the 5-fold partition to bound compute. The same fold indices are used for every $(\text{model} \times \text{KD configuration})$ combination, so all IoU comparisons in Tables~\ref{tab:t2-segmentation}--\ref{tab:t5-latency} are \emph{paired} across folds.
+
+\subsection{Metrics}
+\label{sec:setup-metrics}
+
+We report pixel accuracy, precision, recall, F1-score, and mean intersection-over-union (IoU). Efficiency metrics are model parameters (M, from \texttt{torchinfo.summary}) and ONNX disk size (MB). Latency is reported as median (p50), 95th percentile (p95), mean, and standard deviation over 200 timed forward passes after 20 warm-up passes; throughput as FPS $= 1000\,/\,\text{p50}_{\text{ms}}$. All latency measurements use single-image batches at $256{\times}256$ input resolution.
+
+\subsection{Statistical Validation}
+\label{sec:setup-stats}
+
+For each $(\text{model} \times \text{KD configuration})$, we report mean $\pm$ standard deviation across the 3 folds. The paired Wilcoxon signed-rank test is applied to the no-KD vs.~comb-KD contrast on each architecture, using fold-level paired IoU as the unit of observation. With $n=3$ folds, the minimum reportable two-sided p-value is 0.25; we report exact p-values and explicitly caveat low statistical power throughout. A per-image paired bootstrap analysis on a held-out fraction of FSSD validation pixels is deferred to a future \texttt{v1.1} release and is not used to make headline claims in this paper.
+
+\subsection{Per-Platform Latency Rigging}
+\label{sec:setup-latency}
+
+\begin{itemize}
+\item \textbf{Apple M2~Pro / ONNX Runtime 1.17 CPU EP:} \texttt{scripts/bench\_m2.py}. Single-threaded by default; sessions created with \texttt{intra\_op\_num\_threads = inter\_op\_num\_threads = 1}. 20 warm-up $+$ 200 timed runs.
+\item \textbf{Browser WebAssembly SIMD / ONNX Runtime Web 1.17 from Node.js~25:} \texttt{bench.mjs} (supplementary). \texttt{ort.env.wasm.numThreads = 1; ort.env.wasm.simd = true}. 20 warm-up $+$ 200 timed runs. Equivalent in-browser numbers (Chrome 130, macOS 25.2) were verified to fall within $\pm 10\%$ in pilot runs.
+\end{itemize}
+
+Both benchmarks consume the identical \texttt{.onnx} artifact; no platform-specific graph rewrites are performed.

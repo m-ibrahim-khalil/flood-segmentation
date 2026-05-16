@@ -1,0 +1,34 @@
+% =====================================================================
+%  Section 1 -- Introduction
+% =====================================================================
+
+\section{Introduction}
+\label{sec:intro}
+
+Floods are the most frequent and economically damaging natural disasters globally, accounting for 38.7\% of natural disasters and affecting 43\% of disaster-affected populations between 2000 and 2009~\cite{du2010health}. Rapid urbanisation continues to amplify exposure~\cite{hemmati2020urban}. Because traditional hydrological and hydraulic models suffer from high computational demand, coarse spatial resolution, and limited real-time adaptability~\cite{kumar2023flood}, deep-learning segmentation has emerged as a leading approach to automated flood-extent delineation from satellite, drone, and ground imagery~\cite{bentivoglio2022deep}.
+
+Recent benchmark studies in this space have converged on encoder--decoder architectures --- UNet~\cite{ronneberger2015unet}, SegNet~\cite{badrinarayanan2017segnet}, and DeepLabV3$+$~\cite{chen2018encoder} --- paired with strong feature-extraction backbones, most commonly EfficientNet~\cite{tan2019efficientnet} and ResNet~\cite{he2016deep}. Karc{\i} \emph{et al.}~\cite{karci2026deep} provide the most comprehensive systematic comparison of these combinations on the public Flood Semantic Segmentation Dataset (FSSD), reporting that UNet $+$ EfficientNet achieves the highest segmentation performance (IoU 0.927, F1 0.957, accuracy 0.971) and conclude that this combination ``is ideal for near real-time operational deployment.''
+
+A careful reading of the broader flood-segmentation literature, however, reveals that this operational-deployment claim has not actually been evaluated. Across the 26 related works surveyed by Karc{\i} \emph{et al.}~\cite{karci2026deep} and adjacent studies on UAV~\cite{hernandez2022flood}, SAR~\cite{pechmay2023flooded}, and multi-modal flood mapping~\cite{chamatidis2024vision}, every paper reports segmentation accuracy on academic benchmarks; \emph{none reports model parameters, FLOPs, per-platform inference latency, or post-quantization accuracy.} This omission is consequential. UNet $+$ EfficientNet-B7 --- the configuration favoured in~\cite{karci2026deep} --- has approximately 63\,M parameters and 50\,GFLOPs at $256{\times}256$ input resolution. Such a model cannot run on the drones, embedded sensors, Raspberry-Pi-class community stations, or offline tablet apps that humanitarian organisations such as UN-SPIDER and the ICRC actually deploy in flood zones, where reliable internet connectivity is the exception rather than the rule~\cite{munawar2021review}.
+
+\subsection{Contributions}
+\label{sec:contributions}
+
+This paper makes three contributions.
+
+\begin{enumerate}
+\item \textbf{First systematic multi-platform edge-deployment benchmark for flood segmentation.} We report FP32 and INT8 inference latency for three lightweight UNet students on two deployment targets --- Apple M2~Pro via ONNX Runtime CPU, and browser WebAssembly SIMD via ONNX Runtime Web 1.17 --- together with per-model parameter counts, ONNX disk size, and FP32-to-INT8 size-reduction factors. ONNX serves as the deployment hub: every measured latency reflects the same exported artifact running under a different execution provider.
+
+\item \textbf{Negative empirical finding on knowledge distillation for FSSD-class flood segmentation.} Across three architectures $\times$ four KD configurations $\times$ three folds, no KD configuration improves on the no-KD baseline. ImageNet-pretrained lightweight students match or exceed the UNet$+$EfficientNet-B0 teacher without distillation, and combined response $+$ feature KD strictly underperforms the no-KD baseline on every student. We provide a mechanistic explanation (saturated 663-image benchmark; strong ImageNet priors leave no headroom for the teacher's soft targets) and report exact paired-Wilcoxon p-values, with explicit caveats about the limited statistical power of three folds.
+
+\item \textbf{Architecture-dependent post-training quantization stability characterisation.} Under an identical ONNX static QDQ INT8 recipe (Percentile 99.999\% calibration, per-tensor activations, per-channel weights restricted to Conv/Gemm/MatMul), EfficientNet-Lite0 quantizes cleanly ($\Delta \mathrm{IoU} = -0.043 \pm 0.016$) while MobileNetV3-Small and MobileViT-XXS suffer 0.45--0.46 IoU collapses with cross-fold standard deviations of 0.19--0.34. We trace the failure modes to (i)~the HardSwish activations in MobileNetV3-Small that lack bounded calibration ranges, and (ii)~the LayerNorm and self-attention blocks in MobileViT-XXS that produce rank-deficient calibration statistics under per-channel quantization. The implication for practitioners: \emph{bounded-activation backbones (ReLU6) post-training-quantize reliably for flood segmentation; HardSwish and attention-based backbones require quantization-aware training (QAT).}
+\end{enumerate}
+
+We make our trained checkpoints, the ONNX FP32 and INT8 exports, the per-platform benchmarking harnesses, and a Zenodo-archived release of the full code repository publicly available.
+
+\subsection{Scope and pivot from initial framing}
+\label{sec:scope-pivot}
+
+This work was originally framed as a knowledge-distillation recipe for compressing a heavy flood-segmentation teacher. The empirical results did not support that framing, and we report the negative-KD finding rather than search for a configuration that would justify the original framing. The contribution pivots to the per-platform edge benchmark and the architecture-dependent PTQ characterisation. We hope this orientation is more useful to practitioners than another paper-grade KD recipe, and that the negative result helps future researchers avoid investing compute in distillation on saturated benchmarks where strong ImageNet pretraining has already closed the gap.
+
+The remainder of the paper is organised as follows. Section~\ref{sec:related} reviews relevant prior work on flood segmentation, lightweight segmentation backbones, knowledge distillation, and post-training quantization. Section~\ref{sec:methods} details the FloodLite methodology. Section~\ref{sec:experimental-setup} describes the experimental setup, including the 3-fold protocol and per-platform latency rigging. Section~\ref{sec:results} reports results across Tables~\ref{tab:t1-footprints}--\ref{tab:t5-latency} and Figures~\ref{fig:f2-pareto}--\ref{fig:f4-throughput}. Section~\ref{sec:discussion} discusses the negative-KD finding, per-platform deployment recommendations, and the architecture-dependent PTQ insight. Section~\ref{sec:limitations} lists limitations. Section~\ref{sec:conclusion} concludes.

@@ -1,0 +1,111 @@
+% =====================================================================
+%  FloodLite: A Multi-Platform Edge-Deployment Benchmark for
+%             Lightweight Flood Segmentation
+%  Author: Md Ibrahim Khalil (lead)
+%  Target venue: Elsevier International Journal of Disaster Risk
+%                Reduction (IJDRR), primary.
+%  Backup venue: IGARSS 2026 (4-page extended abstract).
+%  Numbers source of truth:
+%       code/runs/3fold/{summary,quantized,lat_m2,lat_wasm}.json
+%  Tables source of truth: docs/tables.md
+%  Status: v2 draft (post edge-benchmark pivot, 2026-05-16).
+% =====================================================================
+
+\documentclass[preprint,review,12pt]{elsarticle}
+
+% ---------- Packages ----------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[british]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{url}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{textcomp}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{multirow}
+\usepackage{siunitx}
+\sisetup{detect-weight=true,detect-family=true}
+\usepackage{lineno}              % review-mode line numbers
+
+% ---------- Macros for FloodLite numbers ----------
+% Headline numbers; update here and they propagate through the text.
+\newcommand{\teacherIoU}{0.9257}
+\newcommand{\teacherStd}{0.0078}
+\newcommand{\bestStudentIoU}{0.9367}
+\newcommand{\bestStudentStd}{0.0055}
+\newcommand{\bestStudent}{MobileViT-XXS}
+\newcommand{\deployableModel}{EfficientNet-Lite0}
+\newcommand{\deployableINTIoU}{0.8851}
+\newcommand{\deployableINTStd}{0.0149}
+\newcommand{\deployableINTDelta}{-0.0426}
+\newcommand{\deployableMTwoFPS}{58}
+\newcommand{\deployableWASMFPS}{6}
+\newcommand{\teacherMTwoFPS}{3.6}
+
+% Convenience commands.
+\newcommand{\Cn}{C\textsubscript{n}}
+\newcommand{\ie}{i.e.,\ }
+\newcommand{\eg}{e.g.,\ }
+
+% ---------- Front matter ----------
+\journal{International Journal of Disaster Risk Reduction}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{FloodLite: A Multi-Platform Edge-Deployment Benchmark for Lightweight Flood Segmentation}
+
+\author[sensa]{Md Ibrahim Khalil\corref{cor1}}
+\ead{ibrahim@sensa.no}
+
+% Add co-authors here when finalised:
+% \author[affB]{Co-Author Two}
+% \author[affC]{Co-Author Three}
+
+\affiliation[sensa]{
+  organization={Sensa AS},
+  city={Oslo},
+  country={Norway}
+}
+
+\cortext[cor1]{Corresponding author.}
+
+% --- Abstract + keywords ---
+\input{sections/00_abstract}
+
+\begin{keyword}
+flood segmentation \sep edge deployment \sep knowledge distillation \sep post-training quantization \sep ONNX Runtime \sep WebAssembly \sep remote sensing \sep lightweight neural networks \sep disaster response
+\end{keyword}
+
+\end{frontmatter}
+
+\linenumbers
+
+% --- Body sections ---
+\input{sections/01_introduction}
+\input{sections/02_related_work}
+\input{sections/03_methods}
+\input{sections/04_experimental_setup}
+\input{sections/05_results}
+\input{sections/06_discussion}
+\input{sections/07_limitations}
+\input{sections/08_conclusions}
+
+% --- Author contributions, funding, etc. ---
+\input{sections/99_back_matter}
+
+% --- Bibliography ---
+\bibliographystyle{elsarticle-num}
+\bibliography{refs}
+
+% --- Appendices ---
+\appendix
+\input{sections/09_appendix_reproducibility}
+
+\end{document}
