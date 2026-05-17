@@ -68,7 +68,7 @@ The macros propagate to abstract, results, discussion, and conclusion — one ed
 - [ ] F1 pipeline diagram exported as PDF and dropped into `manuscript/figures/`.
 - [ ] F3 qualitative rendered locally and dropped into `manuscript/figures/`.
 - [ ] Zenodo DOI minted; placeholder `[DOI to be minted at submission]` replaced in `09_appendix_reproducibility.tex` and `99_back_matter.tex`.
-- [ ] GitHub username substituted into URLs (currently `[your-username]`).
+- [x] GitHub username substituted into URLs (`m-ibrahim-khalil/flood-segmentation`).
 - [ ] Cover letter (`cover_letter.tex`) finalised with handling-editor name.
 - [ ] Suggested-reviewer list finalised (entered separately in Editorial Manager).
-- [ ] Final read-through: confirm zero `[your-username]`, `[DOI ...]`, or `\fbox{...placeholder...}` strings remain.
+- [ ] Final read-through: confirm zero `[your-username]` or `\fbox{...placeholder...}` strings remain (only the Zenodo DOI placeholder is acceptable until the release is minted via `scripts/release_v1_ijdrr.sh`).

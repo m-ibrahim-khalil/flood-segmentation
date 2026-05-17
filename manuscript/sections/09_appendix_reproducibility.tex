@@ -13,7 +13,7 @@ We provide the following artifacts for reproducibility.
 
 \paragraph{Artifacts.}
 \begin{itemize}\setlength\itemsep{2pt}
-\item \textbf{Code repository} (MIT licence) at \url{github.com/[your-username]/Flood_segmentation_model}; the \texttt{v1.0-ijdrr} tag is the camera-ready commit. Zenodo DOI: [to be minted at submission].
+\item \textbf{Code repository} (MIT licence) at \url{github.com/m-ibrahim-khalil/flood-segmentation}; the \texttt{v1.0-ijdrr} tag is the camera-ready commit. Zenodo DOI: \texttt{[to be minted at release]}.
 \item \textbf{Pre-trained checkpoints} (\texttt{*.pt} PyTorch state-dicts) under \texttt{code/runs/3fold/}: 14 configurations $\times$ 3 folds $= 42$ checkpoints, $\sim 700$\,MB total.
 \item \textbf{ONNX exports} (FP32 and INT8, per fold) for teacher and three students under \texttt{code/exports/}; $\sim 150$\,MB total.
 \item \textbf{Per-fold metrics} in \texttt{results.json} (FP32) and \texttt{quantized.json} (INT8) under \texttt{code/runs/3fold/}; re-derivable by \texttt{run\_full\_experiment.py}.

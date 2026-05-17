@@ -1,0 +1,47 @@
+# Citation File Format (CFF) -- GitHub auto-displays a "Cite this repository"
+# button when this file is present at the repo root.
+# Format spec: https://citation-file-format.github.io/
+
+cff-version: "1.2.0"
+message: "If you use FloodLite in your research, please cite the manuscript (in submission) and the archived code release."
+title: "FloodLite: A Multi-Platform Edge-Deployment Benchmark for Lightweight Flood Segmentation"
+abstract: >-
+  Reproducible code, pre-trained PyTorch checkpoints, ONNX FP32 / INT8 exports,
+  and per-platform benchmarking harnesses for FloodLite -- a systematic
+  edge-deployment benchmark for lightweight UNet flood segmentation on Apple
+  M2 Pro CPU and browser WebAssembly, with an honest knowledge-distillation
+  ablation and an architecture-dependent post-training-quantization stability
+  characterisation.
+authors:
+  - family-names: Khalil
+    given-names: Md Ibrahim
+    affiliation: "Sensa AS, Oslo, Norway"
+    email: "ibrahim@sensa.no"
+type: software
+license: MIT
+repository-code: "https://github.com/m-ibrahim-khalil/flood-segmentation"
+url: "https://github.com/m-ibrahim-khalil/flood-segmentation"
+keywords:
+  - flood segmentation
+  - edge deployment
+  - knowledge distillation
+  - post-training quantization
+  - ONNX Runtime
+  - WebAssembly
+  - remote sensing
+  - lightweight neural networks
+  - disaster response
+version: "1.0-ijdrr"
+date-released: "2026-05-17"
+preferred-citation:
+  type: article
+  authors:
+    - family-names: Khalil
+      given-names: Md Ibrahim
+      affiliation: "Sensa AS, Oslo, Norway"
+      email: "ibrahim@sensa.no"
+  title: "FloodLite: A Multi-Platform Edge-Deployment Benchmark for Lightweight Flood Segmentation"
+  journal: "International Journal of Disaster Risk Reduction"
+  year: 2026
+  status: "in submission"
+  notes: "Under review at IJDRR; archived code release at https://github.com/m-ibrahim-khalil/flood-segmentation"
