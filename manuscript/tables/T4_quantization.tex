@@ -4,7 +4,7 @@
 % =====================================================================
 \begin{table*}[ht]
 \centering
-\caption{\textbf{Post-training INT8 quantization} (static QDQ, Percentile-99.999\% calibration, 200 train images). EfficientNet-Lite0 (highlighted) is the recommended deployable configuration; the other two students suffer architecture-driven PTQ collapse (Section~\ref{sec:results-quant}).}
+\caption{\textbf{Post-training INT8 quantization} (static QDQ, Percentile-99.999\% calibration, 200 train images). EfficientNet-Lite0 (highlighted) is the recommended deployable configuration; the other two students suffer architecture-driven PTQ collapse (Section~\ref{sec:results-quant}). For the two collapsing students the INT8 IoU is strongly multi-modal across folds (MobileNetV3-Small: $0.772 / 0.0001 / 0.657$; MobileViT-XXS: $0.718 / 0.464 / 0.244$), so their mean\,$\pm$\,std is an instability indicator, not a central tendency.}
 \label{tab:t4-quant}
 \small
 \setlength{\tabcolsep}{5pt}

@@ -121,14 +121,24 @@ class FSSD(Dataset):
 
 def make_loaders(root: str | Path, fold: int, n_folds: int = 5,
                  batch_size: int = 8, img_size: int = 256, num_workers: int = 2,
-                 seed: int = 42, use_predefined_split: bool = False):
+                 seed: int = 42, use_predefined_split: bool = False,
+                 train_frac: float = 1.0):
     """Construct train/val DataLoaders.
 
     If ``use_predefined_split`` is True, the dataset's own train/ and val/
     folders are used (``fold`` is ignored). Otherwise we combine the two
     folders and run ``n_folds``-way cross-validation, returning the loader
     pair for the requested fold.
+
+    ``train_frac`` (in (0, 1]) subsamples the *training* set to that fraction
+    for the low-data KD ablation (Mod4); the validation set is always kept
+    whole so IoU stays comparable across fractions. Subsets are deterministic
+    (seeded by ``seed`` and ``fold``) and *nested* --- the 10% set is a subset
+    of the 25% set, etc. --- so the no-KD and KD arms see identical data and
+    fraction sweeps are monotone. Ignored when ``use_predefined_split`` is True.
     """
+    if not 0.0 < train_frac <= 1.0:
+        raise ValueError(f"train_frac must be in (0, 1]; got {train_frac}")
     train_pairs, val_pairs = collect_pairs(root)
     if not train_pairs and not val_pairs:
         raise FileNotFoundError(
@@ -146,6 +156,13 @@ def make_loaders(root: str | Path, fold: int, n_folds: int = 5,
         if not 0 <= fold < n_folds:
             raise ValueError(f"fold must be in [0,{n_folds}); got {fold}")
         train_idx, val_idx = splits[fold]
+        if train_frac < 1.0:
+            # Deterministic, nested subsample: fix a permutation per (seed, fold)
+            # and take a prefix, so 10% subset of 25% subset of ... of 100%.
+            rng = np.random.default_rng(1000 * seed + fold)
+            perm = rng.permutation(len(train_idx))
+            k = max(1, int(round(len(train_idx) * train_frac)))
+            train_idx = train_idx[perm[:k]]
         train_ds = FSSD(all_pairs, indices=train_idx.tolist(), img_size=img_size, train=True)
         val_ds = FSSD(all_pairs, indices=val_idx.tolist(), img_size=img_size, train=False)
 

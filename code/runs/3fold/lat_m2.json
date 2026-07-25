@@ -69,5 +69,13 @@
     "mean_ms": 21.833137075882405,
     "std_ms": 1.8428422261323816,
     "fps": 46.296742111986305
-  }
+  },
+  "teacher_ort_cpu": {
+    "p50_ms": 37.58954198565334,
+    "p95_ms": 44.15741071279625,
+    "mean_ms": 38.333052710513584,
+    "std_ms": 3.4390042175962328,
+    "fps": 26.60314404420427
+  },
+  "_m1_note": "teacher_ort_cpu added from lat_m2_ort117.json (ONNX Runtime 1.17 CPU); teacher_pt_cpu retained for provenance. See review M1."
 }

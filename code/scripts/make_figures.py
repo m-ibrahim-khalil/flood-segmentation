@@ -24,15 +24,17 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # ---------------------------------------------------------------------------
-# Hard-coded architecture metadata (params / FLOPs).
-# Real numbers will come from make_tables.py in Phase C; these are placeholders.
+# Architecture metadata. Params (M) are the full-UNet counts from Table 1
+# (torchinfo.summary), matching tables/T1_footprints.tex. FLOPs are deferred to
+# the camera-ready release (Table 1), so the FLOPs panel renders as a placeholder
+# rather than fabricated numbers.
 # ---------------------------------------------------------------------------
 ARCH = {
-    "teacher":                 {"params": 6.6, "flops": 1.4},
-    "baseline_mobilenetv2":    {"params": 6.6, "flops": 0.9},
-    "mobilenetv3_small_none":  {"params": 1.5, "flops": 0.4},
-    "efficientnet_lite0_none": {"params": 4.4, "flops": 1.0},
-    "mobilevit_xxs_none":      {"params": 1.3, "flops": 0.6},
+    "teacher":                 {"params": 6.25, "size_mb": 22.3},
+    "baseline_mobilenetv2":    {"params": 6.63, "size_mb": None},  # ONNX not exported (Table 1: ---)
+    "mobilenetv3_small_none":  {"params": 3.59, "size_mb": 13.8},
+    "efficientnet_lite0_none": {"params": 5.61, "size_mb": 19.8},
+    "mobilevit_xxs_none":      {"params": 3.09, "size_mb": 12.0},
 }
 
 # Short display labels per config
@@ -173,8 +175,8 @@ def build_f2(
             "placeholder": None,
         },
         {
-            "xlabel": "FLOPs (G)",
-            "data": {k: ARCH[k]["flops"] for k in CONFIGS},
+            "xlabel": "FP32 ONNX size (MB)",
+            "data": {k: ARCH[k]["size_mb"] for k in CONFIGS},
             "placeholder": None,
         },
         {

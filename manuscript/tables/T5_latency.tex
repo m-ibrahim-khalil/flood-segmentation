@@ -4,7 +4,7 @@
 % =====================================================================
 \begin{table*}[ht]
 \centering
-\caption{\textbf{Per-platform inference latency.} Single-image batches, $256{\times}256$ input. M2~Pro and browser WASM both consume the same \texttt{.onnx} artifact under different execution providers. INT8 WASM rows are n/a because ONNX Runtime Web 1.17 does not implement QDQ-format INT8 Conv (upstream limitation; scheduled for ORT-Web 1.18$+$).}
+\caption{\textbf{Per-platform inference latency.} Single-image batches, $256{\times}256$ input. M2~Pro and browser WASM both consume the same \texttt{.onnx} artifact under different execution providers. INT8 WASM rows are n/a because ONNX Runtime Web 1.17 does not implement QDQ-format INT8 Conv (upstream limitation; scheduled for ORT-Web 1.18$+$). \textsuperscript{a}Teacher timed under ONNX Runtime CPU (37.6\,ms p50), matching the students. Under PyTorch eager CPU the same teacher is 274\,ms ($7.3\times$ slower); reporting that PyTorch figure against ORT-CPU students would inflate the apparent teacher-vs-student speedup. On a common ORT-CPU runtime the FP32 students are only $1.0$--$1.7\times$ faster than the teacher, and the recommended EfficientNet-Lite0 INT8 is $2.2\times$ faster. All rows measured on ONNX Runtime 1.17 (\texttt{scripts/bench\_teacher\_ort.py}).}
 \label{tab:t5-latency}
 \small
 \setlength{\tabcolsep}{5pt}
@@ -16,7 +16,7 @@
 \cmidrule(lr){2-4} \cmidrule(lr){5-7}
   & p50 (ms) & p95 (ms) & FPS  & p50 (ms) & p95 (ms) & FPS  \\
 \midrule
-Teacher (UNet$+$EffB0) FP32        & 274.0 & 280.7 & 3.6   & \multicolumn{3}{c}{n/a (out-of-scope for browser deploy)} \\
+Teacher (UNet$+$EffB0) FP32\textsuperscript{a} & 37.6 & 44.2 & 26.6 & \multicolumn{3}{c}{n/a (out-of-scope for browser deploy)} \\
 \midrule
 MobileNetV3-Small FP32             &  19.5 &  20.4 & 51.2  & 133.3 & 134.8 & 7.5 \\
 MobileNetV3-Small INT8             &  13.7 &  14.1 & 72.9  & \multicolumn{3}{c}{n/a (ORT-Web 1.17 limitation)} \\

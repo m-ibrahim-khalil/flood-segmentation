@@ -10,7 +10,11 @@ We presented FloodLite, the first systematic multi-platform edge-deployment benc
 \begin{enumerate}
 \item ImageNet-pretrained lightweight UNets match or exceed a UNet$+$EfficientNet-B0 teacher on FSSD \emph{without} distillation, and combined response$+$feature KD does not improve over no-KD on any of the three architectures.
 \item Post-training INT8 quantization stability is sharply architecture-dependent, with bounded-activation backbones (ReLU6) quantizing cleanly while HardSwish-based and attention-based backbones require quantization-aware training.
-\item The recommended deployable configuration, EfficientNet-Lite0-UNet INT8 served by ONNX Runtime CPU, runs at \deployableMTwoFPS~FPS on a 2023 laptop CPU and \deployableWASMFPS~FPS in a single-threaded WebAssembly browser sandbox at $3.83\times$ size reduction with IoU 0.885 --- a $15.8\times$ speedup over the teacher at 95\% accuracy recovery.
+% M1 (pre-submission review): the former "15.8x speedup over the teacher"
+% compared a PyTorch-eager teacher (274 ms) against ORT-CPU students. On a common
+% ONNX Runtime 1.17 CPU backend the teacher is 37.6 ms (runs/3fold/lat_m2_ort117.json),
+% so the honest INT8-vs-teacher speedup is 2.2x. Numbers below are final (ORT 1.17).
+\item The recommended deployable configuration, EfficientNet-Lite0-UNet INT8 served by ONNX Runtime CPU, runs at \deployableMTwoFPS~FPS on a 2023 laptop CPU at $3.83\times$ size reduction with IoU 0.885 (95\% of the teacher's accuracy) --- a $2.2\times$ speedup over the teacher on the same ONNX Runtime CPU backend; in the browser, where INT8 is unsupported by ONNX Runtime Web~1.17, the FP32 student runs at \deployableWASMFPS~FPS in a single-threaded WebAssembly sandbox.
 \end{enumerate}
 
 The same \texttt{.onnx} artifact serves both targets, which we offer as a practical pattern for flood-segmentation deployment on heterogeneous edge hardware.
