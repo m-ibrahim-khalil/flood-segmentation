@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository purpose
 
-Reproducible code for the manuscript **"FloodLite: Knowledge-Distilled Lightweight Segmentation for On-Device Flood Mapping in Resource-Constrained Disaster Zones"** (Khalil et al., under review at *Remote Sensing*, 2026). The paper draft and roadmap live under `docs/` (`FloodLite_Manuscript.docx`, `FloodLite_Roadmap_and_Plan.docx`, `FloodEDL_Mamba_Research_Plan.docx`); all code lives under `code/`.
+Reproducible code for the manuscript **"FloodLite: A Multi-Platform Edge-Deployment Benchmark for Lightweight Flood Segmentation"** (Chawdhury, Khalil & Haque, under review at the *International Journal of Disaster Risk Reduction*, 2026). The paper draft and roadmap live under `docs/` (`FloodLite_Manuscript.docx`, `FloodLite_Roadmap_and_Plan.docx`, `FloodEDL_Mamba_Research_Plan.docx`); all code lives under `code/`.
 
 Target compute is free-tier: Kaggle T4×2, Colab T4, or a MacBook M2 Pro. The notebook is the primary reproduction path; the script is for headless multi-fold runs.
 

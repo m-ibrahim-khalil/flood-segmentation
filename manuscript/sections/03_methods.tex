@@ -88,7 +88,7 @@ The resulting INT8 graph is consumed by ONNX Runtime's CPU execution provider; n
 \subsection{Deployment Pipeline}
 \label{sec:methods-deploy}
 
-Models are exported via PyTorch's TorchScript-based ONNX exporter (\texttt{torch.onnx.export} with \texttt{dynamo=False} and \texttt{opset\_version=13}) to a single \texttt{.onnx} file with embedded weights. We deliberately disable the PyTorch 2.8$+$ Dynamo exporter (\texttt{dynamo=True}) which produces separate \texttt{.data} sidecar files for weights --- this complicates artifact distribution and is not yet uniformly supported across edge runtimes.
+Models are exported via PyTorch's TorchScript-based ONNX exporter (\texttt{torch.onnx.export} with \texttt{dynamo=False} and \texttt{opset\_version=13}) to a single \texttt{.onnx} file with embedded weights. We deliberately disable the PyTorch 2.8$+$ Dynamo exporter (\texttt{dynamo=True}) which produces separate \texttt{.data} sidecar files for weights --- this complicates artifact distribution and is not yet uniformly supported across edge runtimes. The FP32 latency artifacts use opset 13; the static-QDQ INT8 path (Section~\ref{sec:methods-ptq}) re-exports and quantizes the same trained weights at opset 17, the default of the ONNX Runtime static-quantization tool. Opset choice does not materially affect latency for the Conv/MatMul-dominated graphs measured here.
 
 We use ONNX as the single deployment hub. The same \texttt{.onnx} artifact serves both deployment targets in this paper:
 

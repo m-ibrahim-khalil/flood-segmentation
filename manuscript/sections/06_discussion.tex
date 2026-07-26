@@ -42,7 +42,7 @@ The practical guidance: when assembling a flood-segmentation deployment artifact
 \subsection{Failure Modes (Qualitative)}
 \label{sec:discussion-failures}
 
-Figure~\ref{fig:f3-qualitative} (supplementary) shows that both teacher and EfficientNet-Lite0-INT8 student share two persistent failure modes:
+Figure~\ref{fig:f3-qualitative} shows that both teacher and EfficientNet-Lite0-INT8 student share two persistent failure modes:
 \begin{itemize}
 \item \textbf{Bright-reflective-surface confusion:} wet asphalt, glare-on-roof, and large reflective puddles are misclassified as flood. This is a labelling-modality issue, not a model-capacity issue --- RGB alone cannot disambiguate water from wet non-water surfaces.
 \item \textbf{Vegetation-occluded edges:} when flooded water is partially overhung by trees or tall grass, both models under-segment the flood boundary. The 5-pixel margin at the boundary contributes disproportionately to the residual IoU gap.
