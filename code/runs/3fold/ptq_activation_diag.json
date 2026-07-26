@@ -1,0 +1,46 @@
+{
+  "per_fold_files": [
+    "ptq_activation_diag_fold0.json",
+    "ptq_activation_diag_fold1.json",
+    "ptq_activation_diag_fold2.json"
+  ],
+  "aggregate_over_3_folds": {
+    "mobilenetv3_small": {
+      "layer_max_of_max": {
+        "mean": 156.72952779134116,
+        "std": 8.891440790212446
+      },
+      "layer_max_median": {
+        "mean": 15.567830403645834,
+        "std": 0.23034921794731977
+      },
+      "p99999_max": {
+        "mean": 83.74321038708648,
+        "std": 5.458195879437609
+      },
+      "p99999_median": {
+        "mean": 12.649540877924451,
+        "std": 0.04889223848376625
+      }
+    },
+    "efficientnet_lite0": {
+      "layer_max_of_max": {
+        "mean": 9.27320416768392,
+        "std": 0.7796811078590735
+      },
+      "layer_max_median": {
+        "mean": 6.0,
+        "std": 0.0
+      },
+      "p99999_max": {
+        "mean": 6.952567924453377,
+        "std": 0.2563247213874412
+      },
+      "p99999_median": {
+        "mean": 6.0,
+        "std": 0.0
+      }
+    }
+  },
+  "note": "Post-activation |value| ranges over 80 calibration images per fold; HardSwish (MNv3) vs ReLU6 (EffLite0)."
+}
