@@ -4,20 +4,20 @@
 % =====================================================================
 \begin{table}[ht]
 \centering
-\caption{\textbf{Model footprints.} Parameter counts from \texttt{torchinfo.summary}; ONNX disk sizes from the exported \texttt{.onnx} files. FLOPs deferred to the camera-ready release.}
+\caption{\textbf{Model footprints.} Parameter counts from \texttt{torchinfo.summary}; GFLOPs at $256{\times}256$ (single image, multiply--adds counted as two FLOPs) from PyTorch's \texttt{FlopCounterMode}; ONNX disk sizes from the exported \texttt{.onnx} files. GFLOPs are dominated by the shared UNet decoder at this resolution, so they vary far less across backbones than parameter counts do.}
 \label{tab:t1-footprints}
 \footnotesize
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}lrrr@{}}
+\begin{tabular}{@{}lrrrr@{}}
 \toprule
-\textbf{Model} & \textbf{Params} & \textbf{FP32} & \textbf{INT8} \\
-               & \textbf{(M)}    & \textbf{(MB)} & \textbf{(MB)} \\
+\textbf{Model} & \textbf{Params} & \textbf{GFLOPs} & \textbf{FP32} & \textbf{INT8} \\
+               & \textbf{(M)}    & \textbf{(256\textsuperscript{2})} & \textbf{(MB)} & \textbf{(MB)} \\
 \midrule
-Teacher (UNet$+$EffB0)  & 6.25 & ---  & ---  \\
-MobileNetV2 baseline    & 6.63 & ---  & ---  \\
-MobileNetV3-Small       & 3.59 & 13.8 & 3.7  \\
-EfficientNet-Lite0      & 5.61 & 19.8 & 5.2  \\
-MobileViT-XXS           & 3.09 & 12.0 & 3.5  \\
+Teacher (UNet$+$EffB0)  & 6.25 & 5.92 & ---  & ---  \\
+MobileNetV2 baseline    & 6.63 & 6.69 & ---  & ---  \\
+MobileNetV3-Small       & 3.59 & 5.11 & 13.8 & 3.7  \\
+EfficientNet-Lite0      & 5.61 & 5.91 & 19.8 & 5.2  \\
+MobileViT-XXS           & 3.09 & 5.43 & 12.0 & 3.5  \\
 \bottomrule
 \end{tabular}
 \end{table}

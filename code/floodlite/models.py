@@ -133,20 +133,31 @@ def count_params(model: nn.Module) -> float:
 
 
 def estimate_flops(model: nn.Module, img_size: int = 256, device: str = "cpu") -> float:
-    """Estimate GFLOPs at given input resolution using torchprofile.
+    """Estimate GFLOPs at given input resolution (multiply-adds counted as 2 FLOPs).
 
-    Falls back to ``thop`` or returns NaN if neither is installed.
+    Prefers PyTorch's built-in ``torch.utils.flop_counter.FlopCounterMode``
+    (no extra dependency; counts 2x-MAC FLOPs directly). Falls back to
+    ``torchprofile`` then ``thop``, and returns NaN if none is available.
+    These are the Table 1 GFLOPs figures.
     """
-    model.eval()
+    model.eval().to(device)
     x = torch.randn(1, 3, img_size, img_size, device=device)
     try:
+        from torch.utils.flop_counter import FlopCounterMode
+        fc = FlopCounterMode(display=False)
+        with torch.no_grad(), fc:
+            model(x)
+        return fc.get_total_flops() / 1e9  # FlopCounterMode already reports 2x MACs
+    except Exception:
+        pass
+    try:
         from torchprofile import profile_macs
-        macs = profile_macs(model.to(device), x)
+        macs = profile_macs(model, x)
         return macs * 2 / 1e9  # FLOPs ≈ 2× MACs
     except Exception:
         try:
             from thop import profile
-            macs, _ = profile(model.to(device), inputs=(x,), verbose=False)
+            macs, _ = profile(model, inputs=(x,), verbose=False)
             return macs * 2 / 1e9
         except Exception:
             return float("nan")
