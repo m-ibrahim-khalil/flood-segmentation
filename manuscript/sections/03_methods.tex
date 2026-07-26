@@ -38,7 +38,7 @@ Model footprints (parameter counts and FP32/INT8 ONNX disk sizes) appear in Tabl
 \subsection{Knowledge Distillation Framework}
 \label{sec:methods-kd}
 
-We employ a two-component distillation loss as a controlled ablation, evaluated in three configurations --- response-only ($\beta=0$, $\alpha=0.5$), feature-only ($\alpha=0$, $\beta=0.1$), and combined response $+$ feature ($\alpha=0.5$, $\beta=0.1$) --- against a no-KD baseline ($\alpha=0$, $\beta=0$). The KD configuration is treated as a categorical ablation variable rather than as a tuned hyperparameter; the formulation is the standard one (Hinton-style temperature-scaled binary KL on logits~\cite{hinton2015distilling} plus FitNet-style feature MSE on a matched decoder block through a $1{\times}1$ adapter~\cite{romero2015fitnets}), and the empirical question we ask is whether \emph{any} of $\{$response, feature, combined$\}$ confers a measurable benefit on this task.
+We employ a two-component distillation loss as a controlled ablation, evaluated in three configurations --- response-only ($\beta=0$, $\alpha=0.5$), feature-only ($\alpha=0$, $\beta=0.1$), and combined response $+$ feature ($\alpha=0.5$, $\beta=0.1$) --- against a no-KD baseline ($\alpha=0$, $\beta=0$). The KD configuration is treated as a categorical ablation variable rather than as a tuned hyperparameter; the formulation is the standard one (Hinton-style temperature-scaled binary cross-entropy on softened logits~\cite{hinton2015distilling} plus FitNet-style feature MSE on a matched decoder block through a $1{\times}1$ adapter~\cite{romero2015fitnets}), and the empirical question we ask is whether \emph{any} of $\{$response, feature, combined$\}$ confers a measurable benefit on this task.
 
 Let $x \in \mathbb{R}^{H \times W \times 3}$ denote an input image, $y \in \{0,1\}^{H \times W}$ the ground-truth flood mask, $\hat{z}_T, \hat{z}_S \in \mathbb{R}^{H \times W}$ the pre-sigmoid logits produced by teacher and student respectively, and $f_T^{(\ell)}, f_S^{(\ell)}$ the activations at decoder stage $\ell$.
 
@@ -49,12 +49,12 @@ Let $x \in \mathbb{R}^{H \times W \times 3}$ denote an input image, $y \in \{0,1
 \end{equation}
 where $\sigma(\cdot)$ is the element-wise sigmoid.
 
-\paragraph{Response-based distillation.} A temperature-scaled binary KL divergence between teacher and student probability outputs:
+\paragraph{Response-based distillation.} A temperature-scaled binary cross-entropy between the teacher's soft probabilities and the student's softened outputs (equal to the teacher--student KL divergence up to a teacher-only additive constant, and therefore yielding identical student gradients; this is what \texttt{floodlite/losses.py} computes):
 \begin{equation}
-\mathcal{L}_{\mathrm{resp}} = T^{2} \cdot \mathrm{KL}\!\left(\sigma(\hat{z}_T / T)\;\|\;\sigma(\hat{z}_S / T)\right)
+\mathcal{L}_{\mathrm{resp}} = T^{2} \cdot \mathrm{H}\!\left(\sigma(\hat{z}_T / T),\;\sigma(\hat{z}_S / T)\right)
 \label{eq:resp}
 \end{equation}
-with temperature $T=4$. The $T^{2}$ factor preserves gradient magnitudes at increased temperatures~\cite{hinton2015distilling}.
+where $\mathrm{H}(p,q) = -\,p\log q - (1-p)\log(1-q)$ is the element-wise binary cross-entropy and $T=4$ is the temperature. The $T^{2}$ factor preserves gradient magnitudes at increased temperatures~\cite{hinton2015distilling}.
 
 \paragraph{Feature-based distillation.} We align student and teacher features at one matched decoder stage (resolution $64{\times}64$), introducing a $1{\times}1$ convolutional adapter $g_\theta$ to project student features into the teacher's channel space:
 \begin{equation}
@@ -78,7 +78,7 @@ We instead use the ONNX Runtime \texttt{quantize\_static} API~\cite{ortQuant} (\
 
 \begin{enumerate}
 \item \textbf{Pre-processing.} The FP32 ONNX is passed through \texttt{quant\_pre\_process} to fuse Conv-BN, fold constants, and lift the graph into a form that \texttt{quantize\_static} can analyse.
-\item \textbf{Calibration.} We select 200 randomly-sampled FSSD training images, run the FP32 graph against them through a custom \texttt{CalibrationDataReader} (\texttt{\_TorchLoaderCalibReader} in \texttt{floodlite/quantize.py}), and record activation histograms.
+\item \textbf{Calibration.} We select 80 images (10 batches of 8) drawn only from the current fold's training split --- never from the held-out validation images on which INT8 IoU is reported --- run the FP32 graph against them through a custom \texttt{CalibrationDataReader} (\texttt{\_TorchLoaderCalibReader} in \texttt{floodlite/quantize.py}, invoked with \texttt{n\_calib\_batches=10} in \texttt{scripts/quantize\_all.py}), and record activation histograms.
 \item \textbf{Quantization scheme.} Static QDQ (Quantize--DeQuantize) format with per-tensor activations and per-channel weights, with the per-channel scheme restricted to \texttt{Conv}, \texttt{Gemm}, and \texttt{MatMul} operators only via the \texttt{op\_types\_to\_quantize} argument. The op-type restriction is critical for MobileViT-XXS: without it, the per-channel quantizer attempts to fit per-output-channel scales to the rank-1 weight tensors of LayerNorm and \texttt{Add} operators, which produces undefined behaviour and silently collapses the output.
 \item \textbf{Calibration method.} We use \emph{Percentile} (99.999\%) rather than MinMax. MinMax is sensitive to single-image outlier activations on flood images with extreme reflective surfaces (wet asphalt, sun-glare on water), and produces unstable cross-fold INT8 IoU in our initial sweeps. Percentile-99.999\% is the most robust calibration option we evaluated and is the recipe we report in Section~\ref{sec:results-quant}.
 \end{enumerate}

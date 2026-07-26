@@ -14,7 +14,7 @@ We presented FloodLite, the first systematic multi-platform edge-deployment benc
 % compared a PyTorch-eager teacher (274 ms) against ORT-CPU students. On a common
 % ONNX Runtime 1.17 CPU backend the teacher is 37.6 ms (runs/3fold/lat_m2_ort117.json),
 % so the honest INT8-vs-teacher speedup is 2.2x. Numbers below are final (ORT 1.17).
-\item The recommended deployable configuration, EfficientNet-Lite0-UNet INT8 served by ONNX Runtime CPU, runs at \deployableMTwoFPS~FPS on a 2023 laptop CPU at $3.83\times$ size reduction with IoU 0.885 (95\% of the teacher's accuracy) --- a $2.2\times$ speedup over the teacher on the same ONNX Runtime CPU backend; in the browser, where INT8 is unsupported by ONNX Runtime Web~1.17, the FP32 student runs at \deployableWASMFPS~FPS in a single-threaded WebAssembly sandbox.
+\item The recommended deployable configuration, EfficientNet-Lite0-UNet INT8 served by ONNX Runtime CPU, runs at \deployableMTwoFPS~FPS on a 2023 laptop CPU at $3.83\times$ size reduction with IoU 0.885 (95\% of the teacher's accuracy) --- a $2.2\times$ speedup over the teacher on the same ONNX Runtime CPU backend; in the browser, where INT8 is unsupported by ONNX Runtime Web~1.17, an FP32 student runs at 6--7.5\,FPS in a single-threaded WebAssembly sandbox (MobileNetV3-Small fastest).
 \end{enumerate}
 
 The same \texttt{.onnx} artifact serves both targets, which we offer as a practical pattern for flood-segmentation deployment on heterogeneous edge hardware.
