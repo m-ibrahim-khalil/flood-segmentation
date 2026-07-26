@@ -75,7 +75,7 @@ The manuscript contains placeholders that are populated **after** running the co
 | `{{IOU_RECOVERY_PCT}}`, `{{PARAM_PCT}}`, `{{FLOPS_PCT}}` | Ratios of student vs. teacher metrics (see `code/README.md` §3) |
 | `{{FPS_M2}}`, `{{FPS_PI}}`, `{{FPS_WASM}}` | `1000 / p50_ms`, rounded |
 
-When asked to update manuscript numbers, the source of truth is `runs/results.json` (or notebook output), not memorized values. **Appendix A** of the manuscript is the placeholder map and must be deleted before submission.
+When asked to update manuscript numbers, the source of truth is the per-quantity file recorded in `runs/3fold/PROVENANCE.md`: `summary.json` (segmentation metrics), `quantized.json` (INT8/PTQ — **not** the superseded block inside `results.json`), and `lat_m2.json`/`lat_wasm.json` (latency). Use `stats.json` for the fold-level Wilcoxon. Do not read the `quantized__SUPERSEDED__see_PROVENANCE` block in `results.json`. **Appendix A** of the manuscript is the placeholder map and must be deleted before submission.
 
 ## Deployment exports (`floodlite/export.py`)
 
