@@ -1,0 +1,87 @@
+{
+  "meta": {
+    "description": "Per-image paired bootstrap pooled across folds 0-2 (review Mod1).",
+    "n_boot": 10000,
+    "note": "delta convention A-B; positive => A better. Per-image IoU is biased vs pooled-pixel IoU but cancels in the paired difference."
+  },
+  "kd_contrasts": {
+    "mobilenetv3_small": {
+      "none_minus_resp": {
+        "n_images": 399,
+        "mean_delta": 0.0047119115677692535,
+        "ci95_low": 0.0007576422826538708,
+        "ci95_high": 0.009061724864375918,
+        "p_B_better": 0.0099
+      },
+      "none_minus_feat": {
+        "n_images": 399,
+        "mean_delta": -0.0001413955873714055,
+        "ci95_low": -0.0038516320586951453,
+        "ci95_high": 0.0037656873501930614,
+        "p_B_better": 0.5356
+      },
+      "none_minus_comb": {
+        "n_images": 399,
+        "mean_delta": 0.002323661681105917,
+        "ci95_low": -0.0012491496471235327,
+        "ci95_high": 0.005785861019427912,
+        "p_B_better": 0.1035
+      }
+    },
+    "efficientnet_lite0": {
+      "none_minus_resp": {
+        "n_images": 399,
+        "mean_delta": 0.003995945130972038,
+        "ci95_low": -0.0006516425307830772,
+        "ci95_high": 0.008623173104641132,
+        "p_B_better": 0.0457
+      },
+      "none_minus_feat": {
+        "n_images": 399,
+        "mean_delta": 0.001172889742934913,
+        "ci95_low": -0.0029402197733110653,
+        "ci95_high": 0.005653238649431022,
+        "p_B_better": 0.2964
+      },
+      "none_minus_comb": {
+        "n_images": 399,
+        "mean_delta": 0.002611816676338215,
+        "ci95_low": -0.0014392412097232981,
+        "ci95_high": 0.006586204870676337,
+        "p_B_better": 0.101
+      }
+    },
+    "mobilevit_xxs": {
+      "none_minus_resp": {
+        "n_images": 399,
+        "mean_delta": 0.006475179043031277,
+        "ci95_low": 0.0029134512881288555,
+        "ci95_high": 0.010342315548942198,
+        "p_B_better": 0.0001
+      },
+      "none_minus_feat": {
+        "n_images": 399,
+        "mean_delta": 0.0022128827888565255,
+        "ci95_low": -0.0016583186025756938,
+        "ci95_high": 0.006206941231151568,
+        "p_B_better": 0.1288
+      },
+      "none_minus_comb": {
+        "n_images": 399,
+        "mean_delta": 0.007566697466044796,
+        "ci95_low": 0.003482065829716828,
+        "ci95_high": 0.011810942010996035,
+        "p_B_better": 0.0002
+      }
+    }
+  },
+  "headline_best_vs_teacher": {
+    "mobilevit_xxs_none_minus_teacher": {
+      "n_images": 399,
+      "mean_delta": 0.014609068258663168,
+      "ci95_low": 0.009545327454133142,
+      "ci95_high": 0.019816342687098903,
+      "p_B_better": 0.0
+    }
+  }
+}

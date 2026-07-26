@@ -26,10 +26,14 @@ renamed from `"quantized"` to `"quantized__SUPERSEDED__see_PROVENANCE"`. No code
 
 ## Statistical significance
 
-`scripts/stats_bootstrap.py` implements a powered per-image paired bootstrap for the
-KD and teacher-vs-student contrasts, but it was **not executed** for this version of
-the manuscript: it requires a local FSSD copy, and `stats.json` records the run as
-skipped (`"bootstrap_fold0": {"skipped_reason": ...}`). Accordingly, the manuscript
-reports these contrasts as fold-level directional effects (paired Wilcoxon, minimum
-two-sided p = 0.25) and makes **no** bootstrap confidence-interval or p-value claim.
-Running the bootstrap against a local FSSD download is the top statistical follow-up.
+The powered per-image paired bootstrap for the KD and teacher-vs-student contrasts is
+**`stats_bootstrap.json`** (produced by `scripts/stats_bootstrap.py --data_root <FSSD>
+--ckpt_dir runs/3fold`, using the 42 per-fold checkpoints; $n=399$ pooled held-out
+images, 10,000 replicates, seed-fixed). It was independently re-run and reproduces
+bit-for-bit. This file backs every confidence interval and p-value in the manuscript
+(Sections 3.5, 5.2, 7).
+
+The `"bootstrap_fold0": {"skipped_reason": ...}` entry inside `stats.json` is a
+**different, earlier** analysis — a fold-0-only pixel bootstrap from `scripts/stats.py`
+— which was superseded by the per-image `stats_bootstrap.json` and is not referenced by
+the manuscript. `stats.json` remains authoritative only for the fold-level Wilcoxon.
