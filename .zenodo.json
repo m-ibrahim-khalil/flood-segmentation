@@ -1,10 +1,20 @@
 {
   "title": "FloodLite: A Multi-Platform Edge-Deployment Benchmark for Lightweight Flood Segmentation -- code, ONNX exports, and per-platform benchmarks",
-  "description": "<p>Reproducible code, pre-trained PyTorch checkpoints, ONNX FP32 / INT8 exports, and per-platform benchmarking harnesses for the manuscript:</p><p><em>FloodLite: A Multi-Platform Edge-Deployment Benchmark for Lightweight Flood Segmentation.</em> Khalil <em>et al.</em>, 2026. Under review at the International Journal of Disaster Risk Reduction (IJDRR).</p><p>This release contains the artifacts used to produce every table and figure in the manuscript:</p><ul><li><strong>Code</strong> -- training and evaluation pipeline (<code>code/floodlite/</code>), benchmark scripts (<code>code/scripts/</code>), and figure / table generators.</li><li><strong>Pre-trained PyTorch checkpoints</strong> -- teacher (UNet+EfficientNet-B0), MobileNetV2 baseline, and three lightweight UNet students (MobileNetV3-Small, EfficientNet-Lite0, MobileViT-XXS) under four KD configurations (none, resp, feat, comb), across three folds of FSSD. 42 checkpoints total.</li><li><strong>ONNX exports</strong> -- FP32 and static-QDQ INT8 versions of the three deployable students.</li><li><strong>Per-fold metrics</strong> in <code>code/runs/3fold/{results,quantized,summary,stats,lat_m2,lat_wasm}.json</code>.</li><li><strong>LaTeX manuscript source</strong> under <code>manuscript/</code> (elsarticle, two-column journal format).</li></ul><p>Headline result: the EfficientNet-Lite0-UNet INT8 configuration runs at 58 FPS on a 2023 Apple M2 Pro laptop CPU and 6 FPS in a single-threaded browser WebAssembly sandbox at 3.83x size reduction with 95% IoU recovery relative to the UNet+EfficientNet-B0 teacher.</p><p>See <code>manuscript/main.pdf</code> for the full paper and <code>README.md</code> for reproduction instructions.</p>",
+  "description": "<p>Reproducible code, pre-trained PyTorch checkpoints, ONNX FP32 / INT8 exports, and per-platform benchmarking harnesses for the manuscript:</p><p><em>FloodLite: A Multi-Platform Edge-Deployment Benchmark for Lightweight Flood Segmentation.</em> Chawdhury <em>et al.</em>, 2026. Under review at the International Journal of Disaster Risk Reduction (IJDRR).</p><p>This release contains the artifacts used to produce every table and figure in the manuscript:</p><ul><li><strong>Code</strong> -- training and evaluation pipeline (<code>code/floodlite/</code>), benchmark scripts (<code>code/scripts/</code>), and figure / table generators.</li><li><strong>Pre-trained PyTorch checkpoints</strong> -- teacher (UNet+EfficientNet-B0), MobileNetV2 baseline, and three lightweight UNet students (MobileNetV3-Small, EfficientNet-Lite0, MobileViT-XXS) under four KD configurations (none, resp, feat, comb), across three folds of FSSD. 42 checkpoints total.</li><li><strong>ONNX exports</strong> -- FP32 and static-QDQ INT8 versions of the three deployable students.</li><li><strong>Per-fold metrics</strong> in <code>code/runs/3fold/{results,quantized,summary,stats,lat_m2,lat_wasm}.json</code>.</li><li><strong>LaTeX manuscript source</strong> under <code>manuscript/</code> (elsarticle, two-column journal format).</li></ul><p>Headline result: the EfficientNet-Lite0-UNet INT8 configuration runs at 58 FPS on a 2023 Apple M2 Pro laptop CPU and 6 FPS in a single-threaded browser WebAssembly sandbox at 3.83x size reduction with 95% IoU recovery relative to the UNet+EfficientNet-B0 teacher.</p><p>See <code>manuscript/main.pdf</code> for the full paper and <code>README.md</code> for reproduction instructions.</p>",
   "creators": [
+    {
+      "name": "Chawdhury, Tasfia Noor",
+      "affiliation": "[Affiliation to be confirmed]",
+      "orcid": ""
+    },
     {
       "name": "Khalil, Md Ibrahim",
       "affiliation": "Sensa AS, Oslo, Norway",
+      "orcid": ""
+    },
+    {
+      "name": "Haque, Md Ikramul",
+      "affiliation": "[Affiliation to be confirmed]",
       "orcid": ""
     }
   ],

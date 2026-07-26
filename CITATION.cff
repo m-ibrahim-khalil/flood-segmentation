@@ -13,10 +13,16 @@ abstract: >-
   ablation and an architecture-dependent post-training-quantization stability
   characterisation.
 authors:
+  - family-names: Chawdhury
+    given-names: Tasfia Noor
+    affiliation: "[Affiliation to be confirmed]"
   - family-names: Khalil
     given-names: Md Ibrahim
     affiliation: "Sensa AS, Oslo, Norway"
     email: "ibrahim@sensa.no"
+  - family-names: Haque
+    given-names: Md Ikramul
+    affiliation: "[Affiliation to be confirmed]"
 type: software
 license: MIT
 repository-code: "https://github.com/m-ibrahim-khalil/flood-segmentation"
@@ -36,10 +42,16 @@ date-released: "2026-05-17"
 preferred-citation:
   type: article
   authors:
+    - family-names: Chawdhury
+      given-names: Tasfia Noor
+      affiliation: "[Affiliation to be confirmed]"
     - family-names: Khalil
       given-names: Md Ibrahim
       affiliation: "Sensa AS, Oslo, Norway"
       email: "ibrahim@sensa.no"
+    - family-names: Haque
+      given-names: Md Ikramul
+      affiliation: "[Affiliation to be confirmed]"
   title: "FloodLite: A Multi-Platform Edge-Deployment Benchmark for Lightweight Flood Segmentation"
   journal: "International Journal of Disaster Risk Reduction"
   year: 2026
