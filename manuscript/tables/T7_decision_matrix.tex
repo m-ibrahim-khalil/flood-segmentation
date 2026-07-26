@@ -1,0 +1,36 @@
+% =====================================================================
+%  Table T7 -- Deployment Decision Matrix
+%  Source of truth: summary.json (FP32 IoU), quantized.json (INT8 IoU),
+%  lat_m2.json / lat_wasm.json (latency), T1 (size), T6 (OOD).
+%  Re-presentation of the Section 6.2 recommendations; no new experiments.
+% =====================================================================
+\begin{table*}[ht]
+\centering
+\caption{\textbf{Deployment decision matrix.} Recommended configuration per operational scenario, with the deciding metrics. All values are drawn from Tables~\ref{tab:t1-footprints}, \ref{tab:t2-segmentation}, \ref{tab:t4-quant}, \ref{tab:t5-latency}, and~\ref{tab:t6-ood}; this table re-presents the Section~\ref{sec:discussion-deployment} recommendations as an at-a-glance practitioner reference and introduces no new experiments. Latency is p50 on the platform relevant to each scenario (Apple~M2~Pro ORT-CPU, or browser WASM SIMD).}
+\label{tab:t7-decision}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{p{2.9cm}lcccp{4.5cm}}
+\toprule
+\textbf{Deployment scenario} & \textbf{Recommended} & \textbf{IoU} & \textbf{Latency (p50)} & \textbf{Size (MB)} & \textbf{Rationale / caveat} \\
+\midrule
+Field laptop / tablet (Apple-Silicon CPU)
+  & \textbf{EffLite0-UNet INT8} & 0.885 & 17\,ms (M2) & 5.2
+  & Fastest deployable operating point; the only student that INT8-quantizes stably ($\pm 0.015$). Shipped in our release. \\
+\addlinespace
+Browser / citizen-science web portal
+  & MNV3-S-UNet FP32 & 0.927 & 133\,ms (WASM) & 13.8
+  & Fastest under single-threaded WASM SIMD; MobileViT-XXS FP32 (149\,ms, IoU 0.937) if accuracy matters more. No INT8 in ORT-Web~1.17. \\
+\addlinespace
+Maximum-accuracy off-line / human-in-the-loop
+  & MobileViT-XXS-UNet FP32 & 0.937 & 28\,ms (M2) & 12.0
+  & Highest IoU of any configuration; FP32 only (its INT8 collapses, Table~\ref{tab:t4-quant}). \\
+\addlinespace
+Cross-sensor / satellite optical
+  & \emph{retrain / domain-adapt} & 0.16\textsuperscript{$\dagger$} & --- & ---
+  & No FSSD-trained model transfers zero-shot (Table~\ref{tab:t6-ood}); requires domain adaptation or in-sensor training data. \\
+\bottomrule
+\end{tabular}
+\\[3pt]
+{\footnotesize \textsuperscript{$\dagger$}Zero-shot Sen1Floods11 IoU; all models $\approx 0.16$ (Section~\ref{sec:results-ood}).}
+\end{table*}

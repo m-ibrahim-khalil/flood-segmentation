@@ -1,0 +1,42 @@
+% =====================================================================
+%  Table T8 -- Error Taxonomy
+%  Qualitative synthesis of failure modes established in
+%  Sections 5.3 (PTQ), 5.7 (OOD), 6.4 (qualitative failure modes).
+%  No new experiments; per-class frequencies are NOT claimed.
+% =====================================================================
+\begin{table*}[ht]
+\centering
+\caption{\textbf{Error taxonomy for FSSD flood segmentation.} Four failure classes observed across this study, their mechanism, the direction of the resulting error (operationally, false negatives are the costlier direction, Section~\ref{sec:discussion-asymmetry}), the models affected, and the mitigation each implies. Categories are qualitative, synthesised from Sections~\ref{sec:results-quant}, \ref{sec:results-ood}, and~\ref{sec:discussion-failures}; we do not claim per-class frequencies.}
+\label{tab:t8-taxonomy}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{p{2.6cm}p{4.2cm}p{2.1cm}p{2.4cm}p{3.2cm}}
+\toprule
+\textbf{Failure class} & \textbf{Mechanism} & \textbf{Error type} & \textbf{Affected models} & \textbf{Mitigation} \\
+\midrule
+Reflective-surface confusion
+  & RGB cannot disambiguate water from wet non-water surfaces (wet asphalt, roof glare, standing puddles)
+  & False positive
+  & Teacher and all students
+  & SAR / multispectral fusion (outside the RGB scope) \\
+\addlinespace
+Vegetation-occluded boundary
+  & Flood edges overhung by trees or tall grass are under-segmented
+  & False negative
+  & Teacher and all students
+  & Modality limitation; boundary-aware loss at best partial \\
+\addlinespace
+Cross-sensor distribution shift
+  & Close-range RGB $\rightarrow$ Sentinel-2 satellite optical domain gap
+  & Whole-image collapse (IoU\,$\approx$\,0.16)
+  & All (uniformly)
+  & Domain adaptation or in-sensor retraining \\
+\addlinespace
+INT8 PTQ instability
+  & Unbounded HardSwish tail / attention dynamic range exceed static-QDQ calibration
+  & Model-level collapse ($\Delta$IoU\,$\approx-0.45$, high cross-fold variance)
+  & MobileNetV3-Small, MobileViT-XXS
+  & QAT or a ReLU6-bounded backbone (EffLite0 unaffected) \\
+\bottomrule
+\end{tabular}
+\end{table*}

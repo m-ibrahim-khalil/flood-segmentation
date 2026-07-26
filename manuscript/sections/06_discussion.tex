@@ -32,6 +32,10 @@ Based on the joint segmentation $\times$ latency $\times$ stability evidence (Se
 
 We still do not recommend the teacher (UNet$+$EffB0) for deployment, but for a subtler reason than raw FP32 speed. On a common ONNX Runtime CPU backend the teacher runs at 37.6\,ms p50 (\teacherMTwoFPS~FPS), only $1.1$--$1.9\times$ slower than the FP32 students, so the case against it rests on \emph{model size and quantization headroom} rather than FP32 latency: the recommended EfficientNet-Lite0 INT8 is $2.2\times$ faster (17.3 vs 37.6\,ms) and roughly $4\times$ smaller (5.2 vs 22.3\,MB) while recovering 95\% of the teacher's IoU, and the teacher does not INT8-quantize within our budget.
 
+Table~\ref{tab:t7-decision} consolidates these recommendations into a decision matrix, pairing each operational scenario with the configuration we recommend and the metric that decides it.
+
+\input{tables/T7_decision_matrix}
+
 \subsection{Architecture-Dependent PTQ Stability is a Practitioner Trap}
 \label{sec:discussion-ptq-trap}
 
@@ -49,6 +53,10 @@ Figure~\ref{fig:f3-qualitative} shows that both teacher and EfficientNet-Lite0-I
 \end{itemize}
 
 Both failure modes argue for SAR or multispectral fusion rather than for a different RGB segmentation recipe. We discuss this in Section~\ref{sec:limitations}.
+
+Table~\ref{tab:t8-taxonomy} organises the failure modes observed across the whole study --- the two RGB-modality failures above, the cross-sensor distribution shift of Section~\ref{sec:results-ood}, and the INT8 PTQ instability of Section~\ref{sec:results-quant} --- into a single taxonomy, noting for each its mechanism, error direction, the models affected, and the mitigation it implies. The categories are qualitative: we report the error direction (which matters for the operational cost asymmetry of Section~\ref{sec:discussion-asymmetry}) but do not claim per-class frequencies.
+
+\input{tables/T8_error_taxonomy}
 
 \subsection{Operational Error Asymmetry}
 \label{sec:discussion-asymmetry}
