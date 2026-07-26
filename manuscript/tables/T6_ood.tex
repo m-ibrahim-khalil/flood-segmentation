@@ -1,0 +1,24 @@
+% =====================================================================
+%  Table T6 -- Zero-shot Out-of-Distribution Transfer (Sen1Floods11)
+%  Source of truth: code/runs/3fold/ood_results.json (aggregate over folds 0-2)
+%  In-distribution FSSD IoU: code/runs/3fold/summary.json
+% =====================================================================
+\begin{table*}[ht]
+\centering
+\caption{\textbf{Zero-shot out-of-distribution transfer to Sen1Floods11.} FSSD-trained models (no fine-tuning) evaluated on 250 hand-labelled Sentinel-2 RGB chips; mean $\pm$ std over the three folds' checkpoints. In-distribution FSSD IoU (Table~\ref{tab:t2-segmentation}) is shown for reference. Every model collapses to IoU $\approx 0.16$ --- a domain-shift effect that is uniform across teacher, baseline, and students.}
+\label{tab:t6-ood}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Model} & \textbf{FSSD IoU} & \textbf{OOD IoU} & \textbf{OOD F1} & \textbf{OOD Prec} & \textbf{OOD Rec} \\
+               & \textbf{(in-dist.)} & \multicolumn{4}{c}{\textbf{Sen1Floods11 (zero-shot)}} \\
+\midrule
+Teacher (UNet$+$EffB0)      & 0.9257 & 0.160 $\pm$ 0.007 & 0.246 $\pm$ 0.011 & 0.295 $\pm$ 0.022 & 0.271 $\pm$ 0.017 \\
+MobileNetV2 baseline        & 0.9257 & 0.164 $\pm$ 0.005 & 0.248 $\pm$ 0.011 & 0.385 $\pm$ 0.019 & 0.230 $\pm$ 0.024 \\
+MobileNetV3-S / none        & 0.9269 & 0.173 $\pm$ 0.006 & 0.269 $\pm$ 0.007 & 0.288 $\pm$ 0.011 & 0.317 $\pm$ 0.012 \\
+EfficientNet-Lite0 / none   & 0.9277 & 0.155 $\pm$ 0.013 & 0.241 $\pm$ 0.016 & 0.333 $\pm$ 0.011 & 0.238 $\pm$ 0.025 \\
+MobileViT-XXS / none        & 0.9367 & 0.169 $\pm$ 0.009 & 0.265 $\pm$ 0.008 & 0.242 $\pm$ 0.029 & 0.402 $\pm$ 0.036 \\
+\bottomrule
+\end{tabular}
+\end{table*}

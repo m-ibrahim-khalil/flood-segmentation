@@ -102,3 +102,12 @@ The pipeline schematic appears at the top of Section~\ref{sec:methods} (Figure~\
 \end{figure*}
 
 Two persistent failure modes shared by teacher and student are visible in the hard row of Figure~\ref{fig:f3-qualitative}: wet asphalt confused with water, and under-segmentation of vegetation-occluded flood edges. We return to these in Section~\ref{sec:discussion-failures}.
+
+\subsection{Out-of-Distribution Generalisation (Sen1Floods11)}
+\label{sec:results-ood}
+
+To test whether the FSSD-trained configurations transfer beyond their training distribution, we evaluate every model --- with no fine-tuning --- on 250 hand-labelled RGB chips from Sen1Floods11~\cite{bonafilia2020sen1floods11}, a Sentinel-2 optical flood benchmark whose top-down satellite viewpoint and sensor characteristics differ sharply from FSSD's close-range aerial, oblique, and ground photographs. Table~\ref{tab:t6-ood} reports the result, averaged over the three folds' checkpoints.
+
+\input{tables/T6_ood}
+
+The transfer is poor across the board: every model collapses from IoU $\approx 0.93$ in-distribution to IoU $\approx 0.16$ on Sen1Floods11, a near-total loss of flood-pixel overlap. Two points matter for the deployment story. First, the collapse is essentially uniform across the teacher (0.160), the MobileNetV2 baseline (0.164), and the three lightweight students (0.155--0.173): it is a domain-shift effect, not a compression or capacity artefact, and the lightweight deployable students are if anything marginally more robust than the teacher, so the deployment recommendation of Section~\ref{sec:discussion-deployment} is not weakened \emph{relative} to the teacher by the OOD test. Second, in absolute terms IoU $\approx 0.16$ is not operationally useful: an FSSD-trained close-range-RGB model is \emph{not} a drop-in flood mapper for Sentinel-2 satellite optical imagery, and cross-sensor deployment requires domain adaptation or retraining on in-sensor data. The precision/recall split also mirrors the operational error asymmetry (Section~\ref{sec:discussion-asymmetry}): MobileViT-XXS reaches the highest OOD recall ($0.40$) at the cost of precision --- it over-predicts flood, the safer failure direction under distribution shift --- whereas the MobileNetV2 baseline is the most precision-favouring ($0.385$ precision, $0.230$ recall).
