@@ -31,7 +31,7 @@ For each $(\text{model} \times \text{KD configuration})$, we report mean $\pm$ s
 \label{sec:setup-latency}
 
 \begin{itemize}
-\item \textbf{Apple M2~Pro / ONNX Runtime 1.17 CPU EP:} \texttt{scripts/bench\_m2.py}. Single-threaded by default; sessions created with the intra-op and inter-op thread counts both set to 1. 20 warm-up $+$ 200 timed runs.
+\item \textbf{Apple M2~Pro / ONNX Runtime 1.22.1 CPU EP:} \texttt{scripts/bench\_m2.py}. Default ONNX Runtime CPU threading (the intra-op and inter-op thread counts are left at their defaults; the M2~Pro exposes up to 10 intra-op threads), matching realistic laptop deployment where all cores are available. 20 warm-up $+$ 200 timed runs.
 \item \textbf{Browser WebAssembly SIMD / ONNX Runtime Web 1.17 from Node.js~25:} \texttt{bench.mjs} (supplementary). WASM execution provider with SIMD enabled and \texttt{numThreads} set to 1. 20 warm-up $+$ 200 timed runs. Equivalent in-browser numbers (Chrome 130, macOS 25.2) were verified to fall within $\pm 10\%$ in pilot runs.
 \end{itemize}
 

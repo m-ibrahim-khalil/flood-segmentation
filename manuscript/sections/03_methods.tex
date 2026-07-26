@@ -74,7 +74,7 @@ with $\alpha=0.5$ and $\beta=0.1$. The teacher is frozen during student training
 
 Post-training INT8 quantization (PTQ) is performed on the ONNX export of each student rather than on the PyTorch graph. This choice is forced by two practical findings during development. First, PyTorch eager-mode static PTQ requires CPU tensors for the calibration loop; the existing \texttt{floodlite/quantize.py} initially attempted CUDA calibration and failed. Second, even after fixing the device-placement bug, several \texttt{timm}-\allowbreak prefixed encoders --- specifically the \texttt{tf\_\allowbreak efficientnet\_\allowbreak lite0} and \texttt{mobilevit\_xxs} variants --- use a \texttt{Conv2dSame} layer for which no quantized CPU kernel exists in PyTorch 2.7$+$. Quantization at the PyTorch graph level therefore cannot reach the full student set without modifying upstream \texttt{timm} source.
 
-We instead use the ONNX Runtime \texttt{quantize\_static} API~\cite{ortQuant} (\texttt{onnxruntime.quantization}, v1.17), which operates on the ONNX graph and is independent of the upstream PyTorch operator set. Our recipe is:
+We instead use the ONNX Runtime \texttt{quantize\_static} API~\cite{ortQuant} (\texttt{onnxruntime.quantization}, v1.22.1), which operates on the ONNX graph and is independent of the upstream PyTorch operator set. The resulting INT8 QDQ graphs embed \texttt{ai.onnx.ml} opset~5 and therefore require ONNX Runtime~$\geq 1.18$ to load (ORT~1.17 cannot). Our recipe is:
 
 \begin{enumerate}
 \item \textbf{Pre-processing.} The FP32 ONNX is passed through \texttt{quant\_pre\_process} to fuse Conv-BN, fold constants, and lift the graph into a form that \texttt{quantize\_static} can analyse.
@@ -93,7 +93,7 @@ Models are exported via PyTorch's TorchScript-based ONNX exporter (\texttt{torch
 We use ONNX as the single deployment hub. The same \texttt{.onnx} artifact serves both deployment targets in this paper:
 
 \begin{itemize}
-\item \textbf{Apple M2~Pro:} ONNX Runtime 1.17 with the \texttt{CPUExecutionProvider}. We report this rather than CoreML because (a)~it isolates the inference cost from any platform-specific graph rewrites, and (b)~it is portable to any modern x86 or ARM CPU. CoreML conversion is supported by the same \texttt{.onnx} file via \texttt{coremltools.converters.onnx} but produces numerically equivalent results; we report ORT-CPU as the primary M2 number.
+\item \textbf{Apple M2~Pro:} ONNX Runtime 1.22.1 with the \texttt{CPUExecutionProvider}. We report this rather than CoreML because (a)~it isolates the inference cost from any platform-specific graph rewrites, and (b)~it is portable to any modern x86 or ARM CPU. CoreML conversion is supported by the same \texttt{.onnx} file via \texttt{coremltools.converters.onnx} but produces numerically equivalent results; we report ORT-CPU as the primary M2 number.
 \item \textbf{Browser:} ONNX Runtime Web 1.17 with the WebAssembly SIMD execution provider, single-threaded. We benchmark from Node.js~25 rather than from a Chrome page because (a)~Node's WASM runtime and Chrome's WASM runtime produce numerically equivalent timings within $\pm 10\%$, and (b)~it removes the SharedArrayBuffer / COOP--COEP browser configuration as a measurement-environment variable.
 \end{itemize}
 

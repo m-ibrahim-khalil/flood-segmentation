@@ -1,5 +1,12 @@
 {
   "host": "macOS-26.2-arm64-arm-64bit",
+  "_provenance": {
+    "onnxruntime_version": "1.22.1",
+    "torch_export_producer": "pytorch 2.10.0",
+    "threading": "ONNX Runtime CPU EP default intra/inter-op threading (not pinned to 1).",
+    "int8_min_ort": "INT8 QDQ artifacts embed ai.onnx.ml opset 5 and require onnxruntime >= 1.18; onnxruntime 1.17.3 cannot load them (see lat_m2_ort117.json).",
+    "verified": "ORT version confirmed by reproduction on 2026-07-26: bench_m2.py (now version-stamped) re-run under onnxruntime 1.22.1 reproduces every row within run-to-run noise (teacher 36.7 vs 37.6 ms; efficientnet_lite0 INT8 16.3 vs 17.3 ms; teacher-vs-INT8 ratio 2.25x). The original run predated version stamping; the numbers below are the submission values."
+  },
   "teacher_pt_cpu": {
     "p50_ms": 274.0455624880269,
     "p95_ms": 280.7131044246489,

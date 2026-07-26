@@ -20,6 +20,8 @@ from pathlib import Path
 # Make the package importable when the script is run from any working directory.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import numpy as np
+import onnxruntime as ort
 import torch
 
 from floodlite.benchmark import benchmark_latency, benchmark_onnxruntime
@@ -61,7 +63,16 @@ def main() -> None:
 
     ckpt_dir = Path(args.ckpt_dir)
     exports_dir = Path(args.exports)
-    out: dict = {"host": platform.platform()}
+    # Stamp the runtime versions so latency numbers are self-documenting and
+    # reproducible (mirrors bench_teacher_ort.py). The ORT version in
+    # particular determines whether the INT8 QDQ artifacts load at all
+    # (they embed ai.onnx.ml opset 5 -> require ORT >= 1.18).
+    out: dict = {
+        "host": platform.platform(),
+        "onnxruntime_version": ort.__version__,
+        "torch_version": torch.__version__,
+        "numpy_version": np.__version__,
+    }
 
     # ------------------------------------------------------------------
     # 1. PyTorch CPU — FP32 forward-pass latency
@@ -106,7 +117,8 @@ def main() -> None:
     onnx_targets.append((
         "teacher",
         _resolve(exports_dir / "teacher.onnx",
-                 exports_dir / f"teacher_fold{args.fold}.onnx"),
+                 exports_dir / f"teacher_fold{args.fold}.onnx",
+                 exports_dir / f"teacher_fold{args.fold}_fp32.onnx"),
     ))
     onnx_targets.append((
         "baseline_mobilenetv2",

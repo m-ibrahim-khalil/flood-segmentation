@@ -23,7 +23,7 @@ We provide the following artifacts for reproducibility.
 \paragraph{Environment.}
 \begin{itemize}\setlength\itemsep{2pt}
 \item Random seed: 42, fixed in \texttt{floodlite/utils.py} and in the \texttt{KFold} constructor.
-\item Software: Python 3.11; PyTorch 2.8 with CUDA 12.1 (Kaggle T4) or Apple-Silicon MPS (M2); \texttt{segmentation-models-pytorch} $\geq 0.4$; \texttt{timm} 1.0; \texttt{onnxruntime} 1.17; \texttt{onnxruntime-web} 1.17.3.
+\item Software: Python 3.11; PyTorch 2.8 with CUDA 12.1 (Kaggle T4) or Apple-Silicon MPS (M2); \texttt{segmentation-models-pytorch} $\geq 0.4$; \texttt{timm} 1.0; \texttt{onnxruntime} 1.22.1 (M2 CPU; INT8 QDQ artifacts require $\geq 1.18$); \texttt{onnxruntime-web} 1.17.3 (browser).
 \item Hardware: training on a single Kaggle Tesla T4 (16\,GB); quantization and CPU latency on an Apple M2~Pro (10-core CPU, 16\,GB unified memory, macOS 25.2); WASM latency via Node.js~25.
 \item Estimated reproduction cost: $\sim 35$ Kaggle-T4 hours $+ \sim 2$ M2-CPU hours; wall-clock $\approx 3$ calendar days assuming no Kaggle queue.
 \end{itemize}

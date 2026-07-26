@@ -12,8 +12,10 @@ We presented FloodLite, the first systematic multi-platform edge-deployment benc
 \item Post-training INT8 quantization stability is sharply architecture-dependent, with bounded-activation backbones (ReLU6) quantizing cleanly while HardSwish-based and attention-based backbones require quantization-aware training.
 % M1 (pre-submission review): the former "15.8x speedup over the teacher"
 % compared a PyTorch-eager teacher (274 ms) against ORT-CPU students. On a common
-% ONNX Runtime 1.17 CPU backend the teacher is 37.6 ms (runs/3fold/lat_m2_ort117.json),
-% so the honest INT8-vs-teacher speedup is 2.2x. Numbers below are final (ORT 1.17).
+% common ORT-CPU backend the teacher is 37.6 ms (cross-checked in lat_m2_ort117.json;
+% 36.7 ms when re-timed under ORT 1.22.1 -- version-insensitive), so the honest
+% INT8-vs-teacher speedup is 2.2x. Numbers below are final; the M2 CPU rows are
+% ORT 1.22.1 (see runs/3fold/lat_m2.json _provenance), the browser rows ORT-Web 1.17.3.
 \item The recommended deployable configuration, EfficientNet-Lite0-UNet INT8 served by ONNX Runtime CPU, runs at \deployableMTwoFPS~FPS on a 2023 laptop CPU at $3.83\times$ size reduction with IoU 0.885 (95\% of the teacher's accuracy) --- a $2.2\times$ speedup over the teacher on the same ONNX Runtime CPU backend; in the browser, where INT8 is unsupported by ONNX Runtime Web~1.17, an FP32 student runs at 6--7.5\,FPS in a single-threaded WebAssembly sandbox (MobileNetV3-Small fastest).
 \end{enumerate}
 
