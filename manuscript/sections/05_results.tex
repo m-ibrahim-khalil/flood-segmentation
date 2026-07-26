@@ -5,7 +5,7 @@
 \section{Results}
 \label{sec:results}
 
-This section is organised around Tables~\ref{tab:t1-footprints}--\ref{tab:t5-latency} and Figures~\ref{fig:f2-pareto}--\ref{fig:f4-throughput}. The pipeline schematic (Figure~\ref{fig:f1-pipeline}) is shown in Section~\ref{sec:methods} and the qualitative panel (Figure~\ref{fig:f3-qualitative}) in Section~\ref{sec:results-pipeline}.
+This section is organised around Tables~\ref{tab:t1-footprints}--\ref{tab:t6-ood} and Figures~\ref{fig:f2-pareto}--\ref{fig:f4-throughput}. The pipeline schematic (Figure~\ref{fig:f1-pipeline}) is shown in Section~\ref{sec:methods} and the qualitative panel (Figure~\ref{fig:f3-qualitative}) in Section~\ref{sec:results-pipeline}.
 
 \subsection{Teacher Performance and Karc{\i} \emph{et al.}~(2026) Comparison}
 \label{sec:results-teacher}
@@ -68,12 +68,12 @@ Three remarks. First, the teacher-versus-student latency comparison must be read
 
 \begin{figure*}[ht]
 \centering
-\includegraphics[width=0.92\linewidth]{figures/F2_pareto.pdf}
-\caption{\textbf{Pareto frontier on four deployment-relevant axes.} IoU vs.~$\{$Params, FP32 ONNX size, M2~Pro p50, WASM p50$\}$. The \textbf{EfficientNet-Lite0 INT8} configuration is on the Pareto frontier on the parameter, M2-latency, and WASM-latency axes simultaneously; \textbf{MobileViT-XXS no-KD FP32} is Pareto-optimal on the accuracy axis but not deployable as INT8 under the current static QDQ recipe.}
+\includegraphics[width=0.75\linewidth]{figures/F5_bubble.pdf}
+\caption{\textbf{Consolidated accuracy--latency--size--precision trade-off.} Each configuration is placed by Apple~M2~Pro ORT-CPU p50 latency ($x$) and IoU ($y$); bubble area is proportional to parameter count and colour encodes ONNX disk size, so INT8 quantization moves a model left (faster) and toward a smaller, darker marker. Circles are FP32, diamonds INT8. The two red-ringed points are the recommended operating points --- \textbf{EfficientNet-Lite0 INT8} (maximum throughput at acceptable accuracy) and \textbf{MobileViT-XXS FP32} (maximum accuracy); the two INT8 diamonds at IoU\,$\approx 0.48$ are MobileNetV3-Small and MobileViT-XXS, whose static-QDQ INT8 collapses (Table~\ref{tab:t4-quant}). The teacher (yellow, 22\,MB) offers no M2 latency advantage over the FP32 students. Browser WASM latencies are in Table~\ref{tab:t5-latency}; the four single-axis Pareto panels of the earlier draft remain in the repository as \texttt{figures/F2\_pareto.pdf}.}
 \label{fig:f2-pareto}
 \end{figure*}
 
-The Pareto front therefore identifies two distinct deployment operating points:
+This consolidated view identifies two distinct deployment operating points:
 
 \begin{itemize}
 \item \textbf{Maximum-accuracy operating point:} MobileViT-XXS no-KD FP32 (IoU 0.937, 28\,ms M2, 149\,ms WASM, 12\,MB).
