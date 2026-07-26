@@ -30,7 +30,7 @@ Based on the joint segmentation $\times$ latency $\times$ stability evidence (Se
 \item \textbf{Maximum-accuracy off-line inference:} MobileViT-XXS UNet FP32 (28\,ms p50 on M2~Pro CPU; IoU 0.937). Recommended for human-in-the-loop annotation pipelines.
 \end{itemize}
 
-We still do not recommend the teacher (UNet$+$EffB0) for deployment, but for a subtler reason than raw FP32 speed. On a common ONNX Runtime CPU backend the teacher runs at 37.6\,ms p50 (\teacherMTwoFPS~FPS), only $1.0$--$1.7\times$ slower than the FP32 students, so the case against it rests on \emph{model size and quantization headroom} rather than FP32 latency: the recommended EfficientNet-Lite0 INT8 is $2.2\times$ faster (17.3 vs 37.6\,ms) and roughly $4\times$ smaller (5.2 vs 22.3\,MB) while recovering 95\% of the teacher's IoU, and the teacher does not INT8-quantize within our budget.
+We still do not recommend the teacher (UNet$+$EffB0) for deployment, but for a subtler reason than raw FP32 speed. On a common ONNX Runtime CPU backend the teacher runs at 37.6\,ms p50 (\teacherMTwoFPS~FPS), only $1.1$--$1.9\times$ slower than the FP32 students, so the case against it rests on \emph{model size and quantization headroom} rather than FP32 latency: the recommended EfficientNet-Lite0 INT8 is $2.2\times$ faster (17.3 vs 37.6\,ms) and roughly $4\times$ smaller (5.2 vs 22.3\,MB) while recovering 95\% of the teacher's IoU, and the teacher does not INT8-quantize within our budget.
 
 \subsection{Architecture-Dependent PTQ Stability is a Practitioner Trap}
 \label{sec:discussion-ptq-trap}
